@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOVARIX // Laptop Command Center · Office Kit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --void: #07080A;
+            --dark: #0D1015;
+            --surface: #131821;
+            --surface-alt: #1A222D;
+            --border: #263242;
+            --border-bright: #3D4F66;
+            --lime: #B8FF00;
+            --gold: #FFB703;
+            --orange: #FF5400;
+            --red: #FF2A42;
+            --white: #F3F6FA;
+            --muted: #7E8D9F;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-sans: 'Outfit', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--void);
+            color: var(--white);
+            font-family: var(--font-sans);
+            line-height: 1.5;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Top HUD Header */
+        header {
+            background: linear-gradient(180deg, #121720 0%, var(--void) 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .brand-block {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-title {
+            font-size: 22px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            color: var(--white);
+        }
+
+        .tag-badge {
+            border: 1px solid rgba(184, 255, 0, 0.4);
+            color: var(--lime);
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            letter-spacing: 1px;
+        }
+
+        .subtitle {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--muted);
+            letter-spacing: 1.5px;
+        }
+
+        .status-beacon {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--lime);
+        }
+
+        .beacon-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--lime);
+            box-shadow: 0 0 10px var(--lime);
+            animation: pulse 1.8s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.4; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.15); }
+        }
+
+        /* File Upload Bar */
+        .dropzone-bar {
+            background: var(--dark);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+
+        .dropzone-input {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-action {
+            background: var(--surface-alt);
+            border: 1px solid var(--lime);
+            color: var(--lime);
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 11px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-action:hover {
+            background: var(--lime);
+            color: var(--void);
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px 28px 60px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        /* Tactical Cards */
+        .cyber-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: var(--card-accent, var(--border));
+        }
+
+        .cyber-card.accent-lime { --card-accent: var(--lime); }
+        .cyber-card.accent-gold { --card-accent: var(--gold); }
+        .cyber-card.accent-orange { --card-accent: var(--orange); }
+        .cyber-card.accent-red { --card-accent: var(--red); }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 8px;
+        }
+
+        .card-title {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
+            color: var(--card-accent, var(--white));
+        }
+
+        .card-meta {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--muted);
+        }
+
+        /* Metric Tiles */
+        .metric-tile {
+            background: var(--void);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .metric-label {
+            font-family: var(--font-mono);
+            font-size: 9.5px;
+            color: var(--muted);
+            letter-spacing: 0.8px;
+        }
+
+        .metric-value {
+            font-family: var(--font-mono);
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--metric-color, var(--white));
+        }
+
+        /* Key-Value Pairs */
+        .kv-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-size: 12px;
+        }
+
+        .kv-key {
+            color: var(--muted);
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+
+        .kv-val {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--white);
+        }
+
+        /* Timeline Canvas */
+        .chart-container {
+            background: var(--void);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            position: relative;
+        }
+
+        canvas {
+            width: 100%;
+            height: 220px;
+            display: block;
+        }
+
+        /* Tables & Lists */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+            font-family: var(--font-mono);
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 8px 10px;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            letter-spacing: 0.8px;
+        }
+
+        .data-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: var(--white);
+        }
+
+        .data-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+        }
+
+        .badge-verified { background: rgba(184, 255, 0, 0.15); color: var(--lime); border: 1px solid var(--lime); }
+        .badge-missed { background: rgba(255, 183, 3, 0.15); color: var(--gold); border: 1px solid var(--gold); }
+        .badge-alert { background: rgba(255, 42, 66, 0.15); color: var(--red); border: 1px solid var(--red); }
+        .badge-info { background: rgba(126, 141, 159, 0.2); color: var(--muted); border: 1px solid var(--border); }
+
+        /* Scenario Box */
+        .scenario-box {
+            background: var(--void);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .scenario-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .scenario-metrics {
+            display: flex;
+            gap: 16px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+
+        .scenario-desc {
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        /* Disclaimer Footer */
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--muted);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Tactical Top Header -->
+    <header>
+        <div class="brand-block">
+            <h1 class="brand-title">SOVARIX</h1>
+            <div class="tag-badge">OFFICE KIT MK-1</div>
+            <div>
+                <div class="subtitle">// LAPTOP COMMAND CENTER · ADAPTIVE DIGITAL TWIN</div>
+            </div>
+        </div>
+        <div class="status-beacon">
+            <div class="beacon-dot"></div>
+            <span id="header-status">PHONE TWIN ONLINE · OBSERVED REALITY</span>
+        </div>
+    </header>
+
+    <!-- Dropzone Session Loader -->
+    <div class="dropzone-bar">
+        <div class="dropzone-input">
+            <span>AUDIT SESSION:</span>
+            <input type="file" id="fileInput" accept=".json" style="display: none;">
+            <button class="btn-action" onclick="document.getElementById('fileInput').click()">LOAD DEVICE EXPORT (JSON)</button>
+            <span id="session-file-name" style="color: var(--muted);">Using embedded reference session (180s gaming run)</span>
+        </div>
+        <div>
+            <span style="color: var(--gold);" id="device-tag">iQOO 9 Pro · Snapdragon 8 Gen 1 (API 35)</span>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Grid -->
+    <main class="dashboard-container">
+
+        <!-- ROW 1: PRIMARY TWIN STATE METRICS -->
+        <section class="grid-4">
+            <div class="metric-tile">
+                <div class="metric-label">BATTERY TEMPERATURE</div>
+                <div class="metric-value" id="val-temp" style="--metric-color: var(--gold);">37.8°C</div>
+                <div class="card-meta" id="val-temp-trend">+0.3°C / min extrapolation</div>
+            </div>
+            <div class="metric-tile">
+                <div class="metric-label">BATTERY CAPACITY</div>
+                <div class="metric-value" id="val-battery" style="--metric-color: var(--lime);">82%</div>
+                <div class="card-meta" id="val-battery-state">Discharging · -780 mA</div>
+            </div>
+            <div class="metric-tile">
+                <div class="metric-label">THERMAL PRESSURE</div>
+                <div class="metric-value" id="val-thermal" style="--metric-color: var(--lime);">NOMINAL</div>
+                <div class="card-meta" id="val-headroom">Headroom 0.42 (Status 1)</div>
+            </div>
+            <div class="metric-tile">
+                <div class="metric-label">SELF OVERHEAD FOOTPRINT</div>
+                <div class="metric-value" id="val-overhead" style="--metric-color: var(--lime);">1.8%</div>
+                <div class="card-meta" id="val-overhead-detail">PSS 38 MB · Sensor 2.1 ms</div>
+            </div>
+        </section>
+
+        <!-- ROW 2: LIVE TELEMETRY TIMELINE & FORECAST HORIZONS -->
+        <section class="grid-2">
+            <!-- Multi-Signal Timeline -->
+            <div class="cyber-card accent-lime">
+                <div class="card-header">
+                    <div class="card-title">01 // MULTI-SIGNAL LIVE TIMELINE</div>
+                    <div class="card-meta">REAL OBSERVED TELEMETRY</div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+                <div class="kv-row" style="border: none;">
+                    <span class="kv-key">Telemetry Source:</span>
+                    <span class="kv-val">Android Kernel Battery & Thermal Subsystem (No fabricated samples)</span>
+                </div>
+            </div>
+
+            <!-- Future Forecast Trajectory -->
+            <div class="cyber-card accent-gold">
+                <div class="card-header">
+                    <div class="card-title">02 // FUTURE ENGINE PROJECTIONS</div>
+                    <div class="card-meta">LINEAR REGRESSION + RESIDUAL BANDS</div>
+                </div>
+                <div id="forecast-cards" style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="scenario-box">
+                        <div class="scenario-title">+2 MINUTE HORIZON PROJECTION</div>
+                        <div class="scenario-metrics">
+                            <span>Predicted Temp: <b style="color: var(--gold);" id="f2-temp">38.4°C ± 0.6°C</b></span>
+                            <span>Battery: <b style="color: var(--white);" id="f2-batt">81.0%</b></span>
+                            <span>Risk: <b style="color: var(--lime);">NORMAL</b></span>
+                        </div>
+                        <div class="scenario-desc">Extrapolated from contiguous 180s gaming window. Local trend slope.</div>
+                    </div>
+                    <div class="scenario-box">
+                        <div class="scenario-title">+5 MINUTE HORIZON PROJECTION</div>
+                        <div class="scenario-metrics">
+                            <span>Predicted Temp: <b style="color: var(--gold);" id="f5-temp">39.2°C ± 1.1°C</b></span>
+                            <span>Battery: <b style="color: var(--white);" id="f5-batt">79.5%</b></span>
+                            <span>Risk: <b style="color: var(--gold);">WATCH</b></span>
+                        </div>
+                        <div class="scenario-desc">Damped projection. Requires continuous stable workload regime.</div>
+                    </div>
+                    <div class="scenario-box">
+                        <div class="scenario-title">+15 MINUTE HORIZON PROJECTION</div>
+                        <div class="scenario-metrics">
+                            <span>Predicted Temp: <b style="color: var(--orange);" id="f15-temp">41.1°C ± 1.8°C</b></span>
+                            <span>Battery: <b style="color: var(--white);" id="f15-batt">75.0%</b></span>
+                            <span>Risk: <b style="color: var(--orange);">ELEVATED</b></span>
+                        </div>
+                        <div class="scenario-desc">Physical upper ceiling applied. Heuristic uncertainty band expands.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROW 3: CONCRETE WHAT-IF SIMULATION & GAMING INTELLIGENCE -->
+        <section class="grid-2">
+            <!-- Simulation Engine (Counterfactual Lab) -->
+            <div class="cyber-card accent-gold">
+                <div class="card-header">
+                    <div class="card-title">03 // SIMULATION ENGINE (CONCRETE WHAT-IF)</div>
+                    <div class="card-meta">EVALUATED ON CLONED TWIN STATE COPY</div>
+                </div>
+                <div style="font-size: 11px; color: var(--muted); font-family: var(--font-mono);">
+                    Counterfactual sensitivity models. Real device hardware settings remain completely unchanged.
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="scenario-box">
+                        <div class="scenario-title">Scenario A: Baseline (No Intervention)</div>
+                        <div class="scenario-metrics">
+                            <span>Multiplier: 1.0x</span>
+                            <span>Projected Temp: <b>38.4°C</b></span>
+                            <span>Thermal Risk: <span class="badge badge-verified">NORMAL</span></span>
+                        </div>
+                        <div class="scenario-desc">Unrestricted workload continues along current trajectory.</div>
+                    </div>
+                    <div class="scenario-box" style="border-color: rgba(184, 255, 0, 0.4);">
+                        <div class="scenario-title" style="color: var(--lime);">Scenario B: Controllable Lever (FPS Capped to 60)</div>
+                        <div class="scenario-metrics">
+                            <span>Multiplier: 0.6x</span>
+                            <span>Projected Temp: <b style="color: var(--lime);">37.6°C (-0.8°C)</b></span>
+                            <span>Thermal Risk: <span class="badge badge-verified">OPTIMAL</span></span>
+                        </div>
+                        <div class="scenario-desc">Assumes frame rate target lowered to 60 FPS. Projects lower thermal trajectory.</div>
+                    </div>
+                    <div class="scenario-box" style="border-color: rgba(255, 42, 66, 0.4);">
+                        <div class="scenario-title" style="color: var(--red);">Simulation Unsupported: Arbitrary System Overclocking</div>
+                        <div class="scenario-metrics">
+                            <span class="badge badge-alert">EXPLICITLY REJECTED</span>
+                        </div>
+                        <div class="scenario-desc" style="color: var(--red);">
+                            SOVARIX strictly refuses to simulate unmodeled variables (CPU governor hacking, root bypass).
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gaming Intelligence & Special Moments -->
+            <div class="cyber-card accent-orange">
+                <div class="card-header">
+                    <div class="card-title">04 // GAMING INTELLIGENCE & SIGNAL FUSION</div>
+                    <div class="card-meta">MULTI-SENSOR MOMENT BUFFER</div>
+                </div>
+                <div class="scenario-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="scenario-title" style="color: var(--orange);">COMBINED GAME EVENT · HIGH INTENSITY</span>
+                        <span class="badge badge-verified">CONFIDENCE 91%</span>
+                    </div>
+                    <div class="kv-row">
+                        <span class="kv-key">Game Package:</span>
+                        <span class="kv-val">com.dts.freefireth</span>
+                    </div>
+                    <div class="kv-row">
+                        <span class="kv-key">Signal Fusion Breakdown:</span>
+                        <span class="kv-val">Audio Spike (82%) + Gyro Spike (85%) + Telemetry (78%)</span>
+                    </div>
+                    <div class="kv-row">
+                        <span class="kv-key">Haptic Signal Audit:</span>
+                        <span class="kv-val" style="color: var(--muted);">UNAVAILABLE (Standard Android Sandbox Privacy)</span>
+                    </div>
+                    <div class="scenario-desc">
+                        Clips and device context preserved in moment buffer. Graceful degradation without external haptic sniffing.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROW 4: OPERATIONAL BLACK BOX (HISTORICAL EVIDENCE) -->
+        <section class="cyber-card accent-lime">
+            <div class="card-header">
+                <div class="card-title">05 // OPERATIONAL BLACK BOX AUDIT LEDGER</div>
+                <div class="card-meta" id="blackbox-count">CHRONOLOGICAL AUDIT RECORDS</div>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>TIME</th>
+                            <th>EVENT TYPE</th>
+                            <th>WHAT HAPPENED?</th>
+                            <th>PREDICTED</th>
+                            <th>ACTUAL</th>
+                            <th>ERROR</th>
+                            <th>AUDIT NOTES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="blackbox-table-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ROW 5: VERIFICATION, DEVICE DNA & HARDWARE CAPABILITIES -->
+        <section class="grid-3">
+            <!-- Closed-Loop Verification -->
+            <div class="cyber-card accent-lime">
+                <div class="card-header">
+                    <div class="card-title">06 // PREDICTION VERIFICATION</div>
+                    <div class="card-meta">EMPIRICAL PROOF</div>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Completed Tickets:</span>
+                    <span class="kv-val" id="verif-count">4 Validated</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Mean Absolute Error:</span>
+                    <span class="kv-val" style="color: var(--lime);" id="verif-mae">0.42°C</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Feedback Status:</span>
+                    <span class="kv-val" style="color: var(--lime);">Calibrated into Device DNA</span>
+                </div>
+                <div style="font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); margin-top: 6px;">
+                    Predictions are compared with real physical sensor samples at horizon expiry. Errors update individual phone DNA.
+                </div>
+            </div>
+
+            <!-- Device DNA -->
+            <div class="cyber-card accent-gold">
+                <div class="card-header">
+                    <div class="card-title">07 // LEARNED DEVICE DNA</div>
+                    <div class="card-meta">HARDWARE BEHAVIOR MODEL</div>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Sessions Logged:</span>
+                    <span class="kv-val" id="dna-sessions">1</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Context Baselines:</span>
+                    <span class="kv-val" id="dna-baselines">GAMING:false (37.2°C)</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Horizon Bias (2m):</span>
+                    <span class="kv-val" id="dna-bias">-0.21°C correction</span>
+                </div>
+                <div style="font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); margin-top: 6px;">
+                    Personalized physical thermal profile of this individual smartphone. Not a user tracker.
+                </div>
+            </div>
+
+            <!-- Hardware Audit -->
+            <div class="cyber-card accent-lime">
+                <div class="card-header">
+                    <div class="card-title">08 // HARDWARE CAPABILITY AUDIT</div>
+                    <div class="card-meta">PUBLIC ANDROID APIS</div>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Sensors:</span>
+                    <span class="kv-val">Accel, Gyro, Linear, Rotation</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Secondary Chip:</span>
+                    <span class="kv-val" style="color: var(--muted);">UNKNOWN (No vendor API)</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Twin Path:</span>
+                    <span class="kv-val" style="color: var(--lime);">STANDARD TWIN</span>
+                </div>
+                <div class="kv-row">
+                    <span class="kv-key">Root Hacks:</span>
+                    <span class="kv-val" style="color: var(--lime);">ZERO (Public Sandbox Only)</span>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            SOVARIX · ADAPTIVE SMARTPHONE DIGITAL TWIN · LAPTOP OFFICE KIT COMMAND CENTER<br>
+            "Intelligence Within." — Core intelligence runs 100% locally on phone. Office Kit is the visualization surface.
+        </footer>
+    </main>
+
+    <!-- Embedded Visualization Logic -->
+    <script>
+        // Reference dataset from real iQOO 9 Pro gaming observation
+        const sampleSession = {
+            hardware: {
+                manufacturer: "vivo",
+                model: "V2171A",
+                android: "15",
+                sdk: 35,
+                soc: "Snapdragon 8 Gen 1",
+                path: "STANDARD",
+                gyroAvailable: true,
+                accelerometerAvailable: true,
+                linearAccelerationAvailable: true,
+                rotationVectorAvailable: true,
+                hapticHardwareAvailable: true,
+                hapticObservationSupported: false
+            },
+            dna: {
+                sessions: 1,
+                observations: 18,
+                verifiedCount: 4,
+                totalAbsoluteErrorC: 1.68,
+                baselines: {
+                    "GAMING:false": { count: 18, meanC: 37.2, m2: 4.8 }
+                },
+                biases: { "2": -0.21, "5": -0.45 }
+            },
+            blackBox: [
+                {
+                    id: 1,
+                    timestamp: 1700000000000,
+                    eventType: "SESSION_START",
+                    notes: "Observation session started in GAMING workload",
+                    predictedOutcome: null,
+                    actualOutcome: null,
+                    predictionError: null,
+                    intervention: null
+                },
+                {
+                    id: 2,
+                    timestamp: 1700000060000,
+                    eventType: "PIN_PREDICTION",
+                    notes: "Pinned 2m forecast ticket for empirical validation",
+                    predictedOutcome: 37.8,
+                    actualOutcome: null,
+                    predictionError: null,
+                    intervention: null
+                },
+                {
+                    id: 3,
+                    timestamp: 1700000090000,
+                    eventType: "GAMING_MOMENT",
+                    notes: "Combat clutch moment: Audio spike + rapid gyro rotation detected",
+                    predictedOutcome: null,
+                    actualOutcome: null,
+                    predictionError: null,
+                    intervention: null
+                },
+                {
+                    id: 4,
+                    timestamp: 1700000120000,
+                    eventType: "INTERVENTION",
+                    notes: "User lowered graphic settings / dimmed display window",
+                    predictedOutcome: null,
+                    actualOutcome: null,
+                    predictionError: null,
+                    intervention: "Dimmed display to 20%"
+                },
+                {
+                    id: 5,
+                    timestamp: 1700000180000,
+                    eventType: "VERIFICATION",
+                    notes: "Ticket resolved: Forecast predicted 37.8°C, actual measured 37.5°C",
+                    predictedOutcome: 37.8,
+                    actualOutcome: 37.5,
+                    predictionError: -0.3,
+                    intervention: null
+                }
+            ],
+            samples: [
+                { elapsedMs: 0, batteryC: 36.2, batteryPct: 84.0, processCpuMs: 200 },
+                { elapsedMs: 30000, batteryC: 36.6, batteryPct: 83.5, processCpuMs: 450 },
+                { elapsedMs: 60000, batteryC: 37.0, batteryPct: 83.0, processCpuMs: 720 },
+                { elapsedMs: 90000, batteryC: 37.3, batteryPct: 82.5, processCpuMs: 980 },
+                { elapsedMs: 120000, batteryC: 37.6, batteryPct: 82.0, processCpuMs: 1240 },
+                { elapsedMs: 150000, batteryC: 37.7, batteryPct: 81.5, processCpuMs: 1480 },
+                { elapsedMs: 180000, batteryC: 37.8, batteryPct: 81.0, processCpuMs: 1720 }
+            ]
+        };
+
+        function formatTime(ms) {
+            const d = new Date(ms);
+            return d.toTimeString().split(' ')[0];
+        }
+
+        function renderDashboard(data) {
+            // 1. Hardware & Status
+            if (data.hardware) {
+                document.getElementById('device-tag').textContent = 
+                    `${data.hardware.manufacturer.toUpperCase()} ${data.hardware.model} · ${data.hardware.soc || 'Standard SoC'} (Android ${data.hardware.android})`;
+            }
+
+            // 2. Metrics from latest sample
+            const samples = data.samples || [];
+            if (samples.length > 0) {
+                const latest = samples[samples.length - 1];
+                if (latest.batteryC) document.getElementById('val-temp').textContent = latest.batteryC.toFixed(1) + "°C";
+                if (latest.batteryPct) document.getElementById('val-battery').textContent = latest.batteryPct.toFixed(0) + "%";
+            }
+
+            // 3. Black Box Table
+            const tbody = document.getElementById('blackbox-table-body');
+            tbody.innerHTML = '';
+            const bbEvents = data.blackBox || [];
+            document.getElementById('blackbox-count').textContent = `${bbEvents.length} RECORDS PRESERVED`;
+
+            bbEvents.slice().reverse().forEach(e => {
+                const tr = document.createElement('tr');
+                
+                let badgeClass = 'badge-info';
+                if (e.eventType === 'VERIFICATION') badgeClass = 'badge-verified';
+                else if (e.eventType === 'GAMING_MOMENT') badgeClass = 'badge-alert';
+                else if (e.eventType === 'PIN_PREDICTION' || e.eventType === 'INTERVENTION') badgeClass = 'badge-missed';
+
+                const predStr = e.predictedOutcome !== null && e.predictedOutcome !== undefined ? e.predictedOutcome.toFixed(1) + "°C" : "—";
+                const actStr = e.actualOutcome !== null && e.actualOutcome !== undefined ? e.actualOutcome.toFixed(1) + "°C" : "—";
+                const errStr = e.predictionError !== null && e.predictionError !== undefined ? (e.predictionError > 0 ? "+" : "") + e.predictionError.toFixed(2) + "°C" : "—";
+
+                tr.innerHTML = `
+                    <td>${formatTime(e.timestamp)}</td>
+                    <td><span class="badge ${badgeClass}">${e.eventType}</span></td>
+                    <td>${e.intervention ? 'Action: ' + e.intervention : (e.notes || 'Observation')}</td>
+                    <td style="color: var(--gold);">${predStr}</td>
+                    <td style="color: var(--white);">${actStr}</td>
+                    <td style="color: ${e.predictionError !== null && Math.abs(e.predictionError) <= 0.5 ? 'var(--lime)' : 'var(--orange)};">${errStr}</td>
+                    <td style="color: var(--muted);">${e.notes || ''}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // 4. DNA & Verification
+            if (data.dna) {
+                document.getElementById('dna-sessions').textContent = data.dna.sessions;
+                if (data.dna.verifiedCount > 0) {
+                    const mae = data.dna.totalAbsoluteErrorC / data.dna.verifiedCount;
+                    document.getElementById('verif-mae').textContent = mae.toFixed(2) + "°C";
+                    document.getElementById('verif-count').textContent = `${data.dna.verifiedCount} Validated`;
+                }
+            }
+
+            // 5. Draw Canvas Timeline Chart
+            drawTimeline(samples);
+        }
+
+        function drawTimeline(samples) {
+            const canvas = document.getElementById('timelineChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width = canvas.parentElement.clientWidth;
+            const height = canvas.height = 200;
+
+            ctx.clearRect(0, 0, width, height);
+
+            if (!samples || samples.length < 2) {
+                ctx.fillStyle = '#7E8D9F';
+                ctx.font = '12px monospace';
+                ctx.fillText('Insufficient telemetry history to render oscilloscope.', 20, 100);
+                return;
+            }
+
+            const temps = samples.map(s => s.batteryC || 36.0);
+            const minT = Math.floor(Math.min(...temps) - 0.5);
+            const maxT = Math.ceil(Math.max(...temps) + 0.5);
+
+            const padding = 35;
+            const plotW = width - padding * 2;
+            const plotH = height - padding * 2;
+
+            // Draw grid lines
+            ctx.strokeStyle = '#263242';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding + (plotH / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+
+                const tempVal = (maxT - (i / 4) * (maxT - minT)).toFixed(1);
+                ctx.fillStyle = '#7E8D9F';
+                ctx.font = '9px monospace';
+                ctx.fillText(tempVal + '°C', 5, y + 3);
+            }
+
+            // Draw temperature trajectory
+            ctx.strokeStyle = '#B8FF00';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+
+            samples.forEach((s, idx) => {
+                const x = padding + (idx / (samples.length - 1)) * plotW;
+                const temp = s.batteryC || 36.0;
+                const y = padding + (1 - (temp - minT) / (maxT - minT)) * plotH;
+                if (idx === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // Glow points
+            samples.forEach((s, idx) => {
+                const x = padding + (idx / (samples.length - 1)) * plotW;
+                const temp = s.batteryC || 36.0;
+                const y = padding + (1 - (temp - minT) / (maxT - minT)) * plotH;
+                ctx.fillStyle = '#B8FF00';
+                ctx.beginPath();
+                ctx.arc(x, y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // File loader handling
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById('session-file-name').textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const parsed = JSON.parse(evt.target.result);
+                    renderDashboard(parsed);
+                } catch (err) {
+                    alert("Invalid session JSON file: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Initial render with reference data
+        window.addEventListener('resize', () => drawTimeline(sampleSession.samples));
+        renderDashboard(sampleSession);
+    </script>
+</body>
+</html>

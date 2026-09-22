@@ -1,0 +1,27 @@
+# Gradle and build caches
+.gradle/
+.idea/
+.kotlin/
+.vscode/
+local.properties
+*.jks
+*.keystore
+*.hprof
+bin/
+**/bin/
+
+# Intermediate builds
+**/build/intermediates/
+**/build/tmp/
+**/build/kotlin/
+**/build/generated/
+**/build/reports/
+**/build/test-results/
+core/build/
+
+# Keep APK outputs, ignore other build artifacts
+**/build/*
+!**/build/outputs/
+**/build/outputs/*
+!**/build/outputs/apk/
+!**/build/outputs/apk/**
