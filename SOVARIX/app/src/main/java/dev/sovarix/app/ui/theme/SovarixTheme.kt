@@ -27,6 +27,10 @@ val SovarixOrange = Color(0xFFFF6B2B)          // Hot state
 val SovarixRed = Color(0xFFEF4444)             // Critical state
 val SovarixRedSurface = Color(0xFF280B10)      // Red tint
 
+val SovarixDarkElevated = Color(0xFF172030)    // Alias for interactive elevated surface (= SovarixSurfaceElevated)
+val SovarixBlack = Color(0xFF000000)           // Pure black — for contrast text on cyan buttons
+val SovarixCyanLight = Color(0xFF67F0FF)       // Lighter/muted cyan — secondary cyan labels
+
 val SovarixTextPrimary = Color(0xFFF8FAFC)     // Crisp primary text
 val SovarixTextSecondary = Color(0xFF94A3B8)   // Slate secondary
 val SovarixTextMuted = Color(0xFF64748B)       // Muted details / caption

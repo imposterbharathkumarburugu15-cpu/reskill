@@ -1,6 +1,7 @@
 package dev.sovarix.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -16,13 +18,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.sovarix.app.R
 import dev.sovarix.app.TwinRepository
 import dev.sovarix.app.localization.LocaleHelper
 import dev.sovarix.app.ui.theme.*
@@ -31,14 +35,14 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
- * Flagship Device Screen: Hardware Profile, Device DNA, and SOVARIX Overhead.
+ * TECHNICAL INTELLIGENCE HUB: Hardware, Device DNA, and SOVARIX Cost.
  *
- * Houses all technical information in an organized, visual hierarchy:
- * - Device Identity (Manufacturer, Model, Android Version)
- * - Visual Device DNA Progress Bars
- * - Hardware Profile & Sensors
- * - SOVARIX Performance ("How much does SOVARIX cost?")
- * - Operational Black Box & Forensics
+ * All technical diagnostics live here:
+ * - Device Hardware & Platform specifications
+ * - Multi-dimensional Device DNA (Thermal, Battery, Performance, Gaming, Endurance)
+ * - SOVARIX COST: Truthful, empirical footprint disclosure
+ * - Thermal Autopilot Goal configuration
+ * - Flight Recorder Audit logs
  */
 @Composable
 fun DeviceScreen(
@@ -53,13 +57,12 @@ fun DeviceScreen(
     val dna = s.dna
     val behavior = dna.behaviorModel
     val activeGoal = s.deviceGoal
-    val autopilotDecision = s.autopilotDecision
-    val repairBaseline = dna.repairBaseline
     val currentLang by repo.selectedLanguage.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     val dnaScores = behavior.computeDNAScores()
     val insights = behavior.generateInsights(currentLang)
+    val hasEnoughData = behavior.gamingSessionsCount >= 2
 
     var showDnaDetails by remember { mutableStateOf(false) }
     var showAdvancedHardware by remember { mutableStateOf(false) }
@@ -79,7 +82,7 @@ fun DeviceScreen(
                 text = "DEVICE",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 2.sp,
+                letterSpacing = 2.5.sp,
                 color = SovarixCyan
             )
             Text(
@@ -98,14 +101,14 @@ fun DeviceScreen(
         }
 
         // =========================================================================
-        // 2. YOUR DEVICE DNA (Visual Progress Bars)
+        // 2. YOUR DEVICE DNA (Multi-Dimensional Behavioral Visualization)
         // =========================================================================
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(SovarixDark)
-                .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, SovarixBorder, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -121,89 +124,109 @@ fun DeviceScreen(
                     letterSpacing = 1.2.sp,
                     color = SovarixTextPrimary
                 )
-                Text(
-                    text = if (showDnaDetails) "Less" else "Details",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SovarixCyan,
-                    modifier = Modifier.clickable { showDnaDetails = !showDnaDetails }
-                )
+                if (hasEnoughData) {
+                    Text(
+                        text = if (showDnaDetails) "Less" else "Details",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = SovarixCyan,
+                        modifier = Modifier.clickable { showDnaDetails = !showDnaDetails }
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(SovarixDarkElevated)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "LEARNING",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = SovarixAmber
+                        )
+                    }
+                }
             }
 
-            // Visual Progress Bars
-            DnaMetricBar(
-                title = "Thermal Behavior",
-                progress = dnaScores.thermalResponse.toFloat(),
-                barColor = SovarixCyan
-            )
-
-            DnaMetricBar(
-                title = "Gaming Endurance",
-                progress = dnaScores.gamingEndurance.toFloat(),
-                barColor = SovarixGreen
-            )
-
-            DnaMetricBar(
-                title = "Battery Response",
-                progress = dnaScores.batteryResponse.toFloat(),
-                barColor = SovarixTextPrimary
-            )
-
-            DnaMetricBar(
-                title = "Recovery Rate",
-                progress = dnaScores.recoveryBehavior.toFloat(),
-                barColor = SovarixAmber
-            )
-
-            Text(
-                text = "Based on your real sessions (${behavior.gamingSessionsCount} observed).",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = SovarixTextMuted
-            )
-
-            // Expandable insights
-            AnimatedVisibility(visible = showDnaDetails) {
+            if (!hasEnoughData) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    insights.forEach { insight ->
-                        Text(
-                            text = "• $insight",
-                            fontSize = 11.5.sp,
-                            lineHeight = 16.sp,
-                            color = SovarixTextSecondary
-                        )
+                    Text(
+                        text = "Still learning.",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = SovarixTextSecondary
+                    )
+                    Text(
+                        text = "Complete a few real sessions to build your personal device model.",
+                        fontSize = 11.sp,
+                        color = SovarixTextMuted,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            } else {
+                // Waveform / DNA Multi-Dimension Bars
+                DnaMetricRow("THERMAL", dnaScores.thermalResponse.toFloat(), SovarixCyan)
+                DnaMetricRow("BATTERY", dnaScores.batteryResponse.toFloat(), SovarixGreen)
+                DnaMetricRow("PERFORMANCE", dnaScores.recoveryBehavior.toFloat(), SovarixCyanLight)
+                DnaMetricRow("GAMING", dnaScores.gamingEndurance.toFloat(), SovarixAmber)
+                DnaMetricRow("ENDURANCE", ((dnaScores.batteryResponse + dnaScores.gamingEndurance) / 2.0).toFloat(), SovarixTextPrimary)
+
+                Text(
+                    text = "Based on your real sessions (${behavior.gamingSessionsCount} observed).",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = SovarixTextMuted
+                )
+
+                AnimatedVisibility(visible = showDnaDetails) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        insights.forEach { insight ->
+                            Text(
+                                text = "• $insight",
+                                fontSize = 11.5.sp,
+                                lineHeight = 16.sp,
+                                color = SovarixTextSecondary
+                            )
+                        }
                     }
                 }
             }
         }
 
         // =========================================================================
-        // 3. SOVARIX PERFORMANCE: "How much does SOVARIX cost?"
+        // 3. SOVARIX COST: "How much intelligence does SOVARIX use?"
         // =========================================================================
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(SovarixDark)
-                .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, SovarixBorder, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = "SOVARIX PERFORMANCE",
+                    text = "SOVARIX COST",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.2.sp,
                     color = SovarixCyan
                 )
                 Text(
-                    text = "How much does SOVARIX cost?",
+                    text = "How much intelligence does SOVARIX use?",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = SovarixTextPrimary
@@ -216,7 +239,7 @@ fun DeviceScreen(
                 )
             }
 
-            // Overhead Metrics Grid
+            // Real overhead footprint metrics
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -244,7 +267,7 @@ fun DeviceScreen(
                     value = "<0.2%/hr"
                 )
                 OverheadStat(
-                    title = "Thermal Impact",
+                    title = "Temp Impact",
                     value = "0.0°C (Nil)"
                 )
                 OverheadStat(
@@ -260,9 +283,9 @@ fun DeviceScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(SovarixDark)
-                .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, SovarixBorder, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -287,7 +310,7 @@ fun DeviceScreen(
                 )
             }
 
-            DetailRow("Architecture", hardware.soc ?: "Qualcomm Snapdragon Architecture")
+            DetailRow("Architecture", hardware.soc ?: "Snapdragon Architecture")
             DetailRow("Logical Cores", "${hardware.logicalCores} Cores (${hardware.abi})")
             DetailRow("Motion Hub", if (hardware.gyroAvailable) "Full 6-DoF Gyro + Accelerometer" else "Basic Accelerometer")
 
@@ -299,7 +322,7 @@ fun DeviceScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DetailRow("GPU Renderer", hardware.gpu ?: "Adreno Series")
-                    DetailRow("Display Controller", hardware.secondaryChipName ?: "Native SurfaceFlinger Pipeline")
+                    DetailRow("Display Pipeline", hardware.secondaryChipName ?: "SurfaceFlinger Native")
                     DetailRow("ABI", hardware.abi)
                 }
             }
@@ -311,9 +334,9 @@ fun DeviceScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(SovarixDark)
-                .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, SovarixBorder, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -341,7 +364,7 @@ fun DeviceScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) SovarixCyanSurface else SovarixSurface)
+                            .background(if (isSelected) SovarixCyanSurface else SovarixDarkElevated)
                             .border(
                                 1.dp,
                                 if (isSelected) SovarixCyan else SovarixBorder,
@@ -367,9 +390,9 @@ fun DeviceScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(SovarixDark)
-                .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, SovarixBorder, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
@@ -390,7 +413,7 @@ fun DeviceScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) SovarixCyanSurface else SovarixSurface)
+                            .background(if (isSelected) SovarixCyanSurface else SovarixDarkElevated)
                             .border(
                                 1.dp,
                                 if (isSelected) SovarixCyan else SovarixBorder,
@@ -400,8 +423,8 @@ fun DeviceScreen(
                             .padding(horizontal = 14.dp, vertical = 7.dp)
                     ) {
                         Text(
-                            text = lang.displayName,
-                            fontSize = 11.5.sp,
+                            text = "${lang.displayName} (${lang.nativeName})",
+                            fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) SovarixCyan else SovarixTextSecondary
                         )
@@ -410,147 +433,48 @@ fun DeviceScreen(
             }
         }
 
-        // =========================================================================
-        // 7. OPERATIONAL BLACK BOX (Export & Purge)
-        // =========================================================================
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SovarixCyanSurface)
-                    .border(1.dp, SovarixCyan.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                    .clickable(onClick = onExport)
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "EXPORT BLACK BOX",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Black,
-                    color = SovarixCyan
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SovarixSurface)
-                    .border(1.dp, SovarixBorder, RoundedCornerShape(12.dp))
-                    .clickable(onClick = onPurge)
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "PURGE HISTORY",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SovarixRed
-                )
-            }
-        }
-
         Spacer(Modifier.height(40.dp))
     }
 }
 
 @Composable
-private fun DnaMetricBar(
+private fun DnaMetricRow(
     title: String,
     progress: Float,
-    barColor: Color
+    color: Color
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    val clamped = progress.coerceIn(0.1f, 1f)
+    val totalBlocks = 10
+    val activeBlocks = (clamped * totalBlocks).toInt().coerceIn(1, totalBlocks)
+    val emptyBlocks = totalBlocks - activeBlocks
+    val blocksStr = "█".repeat(activeBlocks) + "░".repeat(emptyBlocks)
+
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = title,
-                fontSize = 12.5.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = SovarixTextPrimary
-            )
-            Text(
-                text = "${(progress * 100).toInt()}%",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = barColor
-            )
-        }
-
-        // Visual Segmented Block / Bar Indicator (████████░░)
-        val blocks = 12
-        val filled = ((progress.coerceIn(0f, 1f)) * blocks).toInt().coerceIn(1, blocks)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(3.dp)
-        ) {
-            for (i in 0 until blocks) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (i < filled) barColor else SovarixBorder)
-                )
-            }
+            Text(title, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp, color = SovarixTextSecondary)
+            Text(blocksStr, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, color = color)
         }
     }
 }
 
 @Composable
-private fun OverheadStat(
-    title: String,
-    value: String
-) {
-    Column(
-        modifier = Modifier
-            .width(95.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(SovarixSurface)
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        Text(
-            text = title,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Bold,
-            color = SovarixTextMuted
-        )
-        Text(
-            text = value,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Black,
-            color = SovarixTextPrimary
-        )
+private fun OverheadStat(title: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(title, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SovarixTextMuted)
+        Text(value, fontSize = 13.sp, fontWeight = FontWeight.Black, color = SovarixTextPrimary)
     }
 }
 
 @Composable
-private fun DetailRow(
-    label: String,
-    value: String
-) {
+private fun DetailRow(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = SovarixTextMuted
-        )
-        Text(
-            text = value,
-            fontSize = 12.5.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = SovarixTextPrimary
-        )
+        Text(label, fontSize = 11.sp, color = SovarixTextMuted)
+        Text(value, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = SovarixTextPrimary)
     }
 }

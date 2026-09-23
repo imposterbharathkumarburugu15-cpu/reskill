@@ -1,6 +1,8 @@
 package dev.sovarix.app.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,13 +19,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.sovarix.app.R
 import dev.sovarix.app.TwinRepository
 import dev.sovarix.app.ui.theme.*
 import dev.sovarix.core.*
@@ -32,13 +37,12 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Flagship LAB Screen: "What could happen?"
+ * LAB: "WHAT-IF MACHINE"
  *
- * An elegant scenario interface for counterfactual predictions.
- * Avoids spreadsheet/dashboard grid aesthetics in favor of:
- * - Direct scenario query chips
- * - Current State vs Predicted vs Possible Response
- * - Interactive parameter sliders (Duration, Screen Capture, Charge)
+ * An interactive scenario laboratory showing diverging counterfactual realities.
+ * - Interactive prompts: "Play for 60 minutes", "Lower workload", etc.
+ * - Diverging Timelines Canvas: Current Reality vs Simulated Future
+ * - Possible twin response & parameters
  * - Safe Diagnostic Experiments kept accessible in a clean bottom sheet
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,7 +57,6 @@ fun LabScreen(
     val currentSample = s.latest ?: liveSample
 
     val simOutcome by repo.simulationResult.collectAsStateWithLifecycle()
-    val currentLang by repo.selectedLanguage.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     val activeExp by repo.activeExperiment.collectAsStateWithLifecycle()
@@ -64,37 +67,38 @@ fun LabScreen(
     val currentBattery = currentSample?.batteryPct ?: s.battery ?: 75.0
 
     val scenarios = listOf(
-        "What if I play for another hour?",
-        "What if I record while gaming?",
-        "What if I charge while gaming?",
-        "What if I reduce the workload?",
-        "What if thermal load continues?"
+        "Play for 60 minutes",
+        "Lower workload",
+        "Keep performance stable",
+        "Reduce battery drain"
     )
 
     var activeScenario by remember { mutableStateOf(scenarios[0]) }
     var gamingDurationMin by remember { mutableFloatStateOf(60f) }
-    var isRecordingEnabled by remember { mutableStateOf(false) }
     var showExperimentsSheet by remember { mutableStateOf(false) }
     var consentTargetExp by remember { mutableStateOf<Experiment?>(null) }
 
-    // Run simulation whenever active scenario or slider changes
-    LaunchedEffect(activeScenario, gamingDurationMin, isRecordingEnabled) {
-        val query = if (activeScenario == scenarios[0]) {
-            "What happens if I game for ${gamingDurationMin.roundToInt()} minutes?"
-        } else {
-            activeScenario
+    // Run simulation query
+    LaunchedEffect(activeScenario, gamingDurationMin) {
+        val query = when (activeScenario) {
+            "Play for 60 minutes" -> "What happens if I game for ${gamingDurationMin.roundToInt()} minutes?"
+            "Lower workload" -> "What happens if Auto-Cool throttles background sensors?"
+            "Keep performance stable" -> "What happens if device prioritizes sustained FPS?"
+            "Reduce battery drain" -> "What happens if power saving governor engages?"
+            else -> activeScenario
         }
         repo.simulateQuery(query)
     }
 
     val result = simOutcome as? SimulationResult
-    val predictedTemp = result?.recommendedScenario?.predictedTemperatureC
-        ?: result?.scenarios?.firstOrNull()?.predictedTemperatureC
-        ?: (currentTemp + (gamingDurationMin / 60.0) * 1.8)
-
-    val predictedBattery = result?.recommendedScenario?.predictedBatteryPct
-        ?: result?.scenarios?.firstOrNull()?.predictedBatteryPct
-        ?: (currentBattery - (gamingDurationMin / 60.0) * 16.0).coerceAtLeast(5.0)
+    val predictedTemp = when (activeScenario) {
+        "Lower workload" -> (currentTemp - 1.2).coerceAtLeast(35.5)
+        "Reduce battery drain" -> (currentTemp - 0.8).coerceAtLeast(36.0)
+        "Keep performance stable" -> (currentTemp + 2.4)
+        else -> result?.recommendedScenario?.predictedTemperatureC
+            ?: result?.scenarios?.firstOrNull()?.predictedTemperatureC
+            ?: (currentTemp + (gamingDurationMin / 60.0) * 1.8)
+    }
 
     val possibleResponse = when {
         predictedTemp >= 42.0 -> "Auto-Cool Aggressive Mitigation"
@@ -111,7 +115,7 @@ fun LabScreen(
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         // =========================================================================
-        // 1. HEADER
+        // 1. HERO HEADER
         // =========================================================================
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -120,14 +124,14 @@ fun LabScreen(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "LAB",
-                    fontSize = 20.sp,
+                    text = "PHONE LAB",
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
+                    letterSpacing = 2.5.sp,
                     color = SovarixTextPrimary
                 )
                 Text(
-                    text = "What could happen?",
+                    text = "\"What do you want to test?\"",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = SovarixCyan
@@ -138,7 +142,7 @@ fun LabScreen(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .background(SovarixDark)
+                    .background(SovarixDarkElevated)
                     .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
                     .clickable { showExperimentsSheet = true }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -167,14 +171,14 @@ fun LabScreen(
         }
 
         // =========================================================================
-        // 2. SCENARIO SELECTOR: "What do you want to test?"
+        // 2. INTERACTIVE PROMPTS: "WHAT IF I..."
         // =========================================================================
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                text = "WHAT DO YOU WANT TO TEST?",
+                text = "WHAT IF I...",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.2.sp,
+                letterSpacing = 1.4.sp,
                 color = SovarixTextMuted
             )
 
@@ -187,14 +191,14 @@ fun LabScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) SovarixCyanSurface else SovarixDark)
+                            .background(if (isSelected) SovarixCyanSurface else SovarixDarkElevated)
                             .border(
                                 1.dp,
                                 if (isSelected) SovarixCyan else SovarixBorder,
                                 RoundedCornerShape(20.dp)
                             )
                             .clickable { activeScenario = scenario }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .padding(horizontal = 14.dp, vertical = 9.dp)
                     ) {
                         Text(
                             text = scenario,
@@ -208,87 +212,84 @@ fun LabScreen(
         }
 
         // =========================================================================
-        // 3. ELEGANT PREDICTION SUMMARY (Clean typography & hierarchy, NOT a spreadsheet)
+        // 3. DIVERGING TIMELINES VISUALIZATION
         // =========================================================================
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(SovarixDark)
-                .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
+                .border(1.dp, SovarixBorder, RoundedCornerShape(20.dp))
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Selected Query Callout
-            Text(
-                text = "\"$activeScenario\"",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                lineHeight = 20.sp,
-                color = SovarixTextPrimary
-            )
-
-            // Dynamic 3-Part Outcome Breakdown
+            // Diverging state figures: CURRENT REALITY vs SIMULATED FUTURE
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                // CURRENT STATE
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // CURRENT REALITY
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
-                        text = "CURRENT STATE",
+                        text = "CURRENT REALITY",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp,
                         color = SovarixTextMuted
                     )
                     Text(
-                        text = String.format(Locale.US, "%.1f°C", currentTemp),
-                        fontSize = 24.sp,
+                        text = String.format(Locale.US, "%.1f°", currentTemp),
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
                         color = SovarixTextPrimary
                     )
                     Text(
-                        text = "${currentBattery.toInt()}% Battery",
-                        fontSize = 11.sp,
+                        text = "Stable Baseline",
+                        fontSize = 10.5.sp,
                         color = SovarixTextSecondary
                     )
                 }
 
-                // Divider
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(50.dp)
-                        .background(SovarixBorder)
-                )
-
-                // PREDICTED
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // SIMULATED FUTURE
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
                     Text(
-                        text = "PREDICTED",
+                        text = "SIMULATED FUTURE",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp,
                         color = SovarixCyan
                     )
+                    val futureColor = if (predictedTemp >= 40.0) SovarixOrange else SovarixCyan
                     Text(
-                        text = String.format(Locale.US, "%.1f°C", predictedTemp),
-                        fontSize = 24.sp,
+                        text = String.format(Locale.US, "%.1f°", predictedTemp),
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
-                        color = if (predictedTemp >= 40.0) SovarixAmber else SovarixCyan
+                        color = futureColor
                     )
                     val delta = predictedTemp - currentTemp
                     Text(
                         text = "${if (delta >= 0) "+" else ""}${String.format(Locale.US, "%.1f°C", delta)}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (delta > 1.5) SovarixAmber else SovarixGreen
+                        color = if (delta > 1.5) SovarixOrange else SovarixGreen
                     )
                 }
             }
 
-            // Thin Divider
+            // Diverging Timelines Animation Canvas
+            DivergingTimelinesCanvas(
+                currentTemp = currentTemp,
+                predictedTemp = predictedTemp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(90.dp)
+            )
+
+            // Divider
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -321,7 +322,7 @@ fun LabScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(SovarixSurface)
+                        .background(SovarixDarkElevated)
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -335,45 +336,33 @@ fun LabScreen(
         }
 
         // =========================================================================
-        // 4. INTERACTIVE CONTROLS & SLIDERS
+        // 4. INTERACTIVE DURATION SLIDER (When duration testing is active)
         // =========================================================================
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(
-                text = "INTERACTIVE PARAMETERS",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.2.sp,
-                color = SovarixTextMuted
-            )
-
-            // Duration Slider
+        if (activeScenario == scenarios[0]) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(SovarixSurface)
-                    .border(1.dp, SovarixBorder, RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(SovarixDark)
+                    .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Session Duration",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = SovarixTextPrimary
+                        text = "SIMULATION DURATION",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = SovarixTextSecondary
                     )
                     Text(
                         text = "${gamingDurationMin.roundToInt()} min",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
                         color = SovarixCyan
                     )
                 }
@@ -386,18 +375,9 @@ fun LabScreen(
                     colors = SliderDefaults.colors(
                         thumbColor = SovarixCyan,
                         activeTrackColor = SovarixCyan,
-                        inactiveTrackColor = SovarixDark
+                        inactiveTrackColor = SovarixBorder
                     )
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("15 min", fontSize = 10.sp, color = SovarixTextMuted)
-                    Text("60 min", fontSize = 10.sp, color = SovarixTextMuted)
-                    Text("120 min", fontSize = 10.sp, color = SovarixTextMuted)
-                }
             }
         }
 
@@ -405,120 +385,92 @@ fun LabScreen(
     }
 
     // =========================================================================
-    // 5. SAFETY EXPERIMENTS MODAL BOTTOM SHEET
+    // 5. DIAGNOSTIC EXPERIMENTS BOTTOM SHEET
     // =========================================================================
     if (showExperimentsSheet) {
         ModalBottomSheet(
             onDismissRequest = { showExperimentsSheet = false },
-            containerColor = SovarixDark
+            containerColor = SovarixDarkElevated,
+            contentColor = SovarixTextPrimary,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .width(36.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(SovarixBorder)
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 12.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
                     text = "SAFE DIAGNOSTIC EXPERIMENTS",
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp,
-                    color = SovarixCyan
+                    letterSpacing = 1.2.sp,
+                    color = SovarixTextPrimary
                 )
-
                 Text(
-                    text = "Measure real battery drain and thermal variance between normal baseline and active features under safe 30-second tests.",
-                    fontSize = 12.sp,
-                    color = SovarixTextSecondary,
-                    lineHeight = 17.sp
+                    text = "Runs bounded 30-second thermal tests with strict automatic safety rollbacks.",
+                    fontSize = 11.5.sp,
+                    color = SovarixTextSecondary
                 )
 
-                // Active test status
-                activeExp?.let { exp ->
-                    Box(
+                availableExps.forEach { exp ->
+                    val isRunning = activeExp?.id == exp.id
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(SovarixGreenSurface)
-                            .border(1.dp, SovarixGreen, RoundedCornerShape(12.dp))
-                            .padding(14.dp)
+                            .background(SovarixDark)
+                            .border(1.dp, if (isRunning) SovarixGreen else SovarixBorder, RoundedCornerShape(12.dp))
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
                             Text(
-                                text = "RUNNING: ${exp.title}",
-                                fontSize = 12.sp,
+                                text = exp.title,
+                                fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = SovarixGreen
-                            )
-                            Text(
-                                text = "Observations: ${exp.baselineObservations.size + exp.treatmentObservations.size}/20",
-                                fontSize = 11.sp,
                                 color = SovarixTextPrimary
                             )
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        repo.cancelExperiment()
-                                        onMessage("Diagnostic test cancelled safely.")
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = SovarixRed),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Cancel Test", color = Color.White, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-
-                // Available tests
-                availableExps.forEach { exp ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SovarixSurface)
-                            .border(1.dp, SovarixBorder, RoundedCornerShape(12.dp))
-                            .padding(14.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = exp.title,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = SovarixTextPrimary
-                                )
-                                Text("30s", fontSize = 10.sp, color = SovarixCyan)
-                            }
                             Text(
                                 text = exp.question,
-                                fontSize = 11.5.sp,
-                                color = SovarixTextSecondary
+                                fontSize = 10.5.sp,
+                                color = SovarixTextMuted
                             )
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        if (isRunning) {
                             Button(
-                                onClick = {
-                                    showExperimentsSheet = false
-                                    scope.launch {
-                                        repo.startExperiment(exp.id)
-                                        onMessage("Started test: ${exp.title}")
-                                    }
-                                },
-                                enabled = activeExp == null,
-                                colors = ButtonDefaults.buttonColors(containerColor = SovarixCyan),
-                                modifier = Modifier.fillMaxWidth()
+                                onClick = { scope.launch { repo.cancelExperiment() } },
+                                colors = ButtonDefaults.buttonColors(containerColor = SovarixRed),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
-                                Text(
-                                    text = "Run 30s Safe Test",
-                                    color = SovarixDark,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
+                                Text("ABORT", fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            }
+                        } else {
+                            Button(
+                                onClick = { consentTargetExp = exp },
+                                colors = ButtonDefaults.buttonColors(containerColor = SovarixCyan),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("START", fontSize = 10.sp, fontWeight = FontWeight.Black, color = SovarixBlack)
                             }
                         }
                     }
@@ -527,5 +479,144 @@ fun LabScreen(
                 Spacer(Modifier.height(16.dp))
             }
         }
+    }
+
+    // Safety Consent Dialog
+    consentTargetExp?.let { target ->
+        AlertDialog(
+            onDismissRequest = { consentTargetExp = null },
+            title = {
+                Text("Start ${target.title}?", fontWeight = FontWeight.Black, color = SovarixTextPrimary)
+            },
+            text = {
+                Text(
+                    "This test will run for 30 seconds to calibrate the digital twin baseline. Safe temperature bounds will abort instantly if exceeded.",
+                    color = SovarixTextSecondary,
+                    fontSize = 12.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val exp = consentTargetExp
+                        consentTargetExp = null
+                        showExperimentsSheet = false
+                        if (exp != null) {
+                            scope.launch {
+                                repo.startExperiment(exp.id)
+                            }
+                        }
+                    }
+                ) {
+                    Text("AUTHORIZE", fontWeight = FontWeight.Bold, color = SovarixCyan)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { consentTargetExp = null }) {
+                    Text("CANCEL", color = SovarixTextMuted)
+                }
+            },
+            containerColor = SovarixDarkElevated
+        )
+    }
+}
+
+/**
+ * Diverging Timelines Canvas:
+ * Visually illustrates the bifurcation between Current Reality and Simulated Future.
+ */
+@Composable
+private fun DivergingTimelinesCanvas(
+    currentTemp: Double,
+    predictedTemp: Double,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "divergingTimeline")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulseProgress"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val startX = 16.dp.toPx()
+        val forkX = w * 0.35f
+        val endX = w - 16.dp.toPx()
+        val midY = h * 0.55f
+
+        val delta = predictedTemp - currentTemp
+        val targetY = (midY - (delta * 14.0).coerceIn((-h * 0.38f).toDouble(), (h * 0.38f).toDouble())).toFloat()
+
+        // 1. Current Reality Path (Baseline horizontal solid line)
+        val currentPath = Path().apply {
+            moveTo(startX, midY)
+            lineTo(endX, midY)
+        }
+        drawLine(
+            color = SovarixCyan.copy(alpha = 0.5f),
+            start = Offset(startX, midY),
+            end = Offset(endX, midY),
+            strokeWidth = 2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // 2. Simulated Future Diverging Path (Curved arc branching off from forkX)
+        val futureColor = if (predictedTemp >= 40.0) SovarixOrange else SovarixCyanLight
+        val futurePath = Path().apply {
+            moveTo(forkX, midY)
+            cubicTo(
+                forkX + (endX - forkX) * 0.4f, midY,
+                forkX + (endX - forkX) * 0.6f, targetY,
+                endX, targetY
+            )
+        }
+        drawPath(
+            path = futurePath,
+            color = futureColor,
+            style = Stroke(
+                width = 2.5.dp.toPx(),
+                cap = StrokeCap.Round,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f), 0f)
+            )
+        )
+
+        // 3. Origin Anchor Node
+        drawCircle(
+            color = SovarixCyan,
+            center = Offset(startX, midY),
+            radius = 3.5.dp.toPx()
+        )
+
+        // 4. Branching Fork Node
+        drawCircle(
+            color = SovarixCyan,
+            center = Offset(forkX, midY),
+            radius = 4.dp.toPx()
+        )
+
+        // 5. Current Reality Endpoint
+        drawCircle(
+            color = SovarixCyan.copy(alpha = 0.7f),
+            center = Offset(endX, midY),
+            radius = 3.dp.toPx()
+        )
+
+        // 6. Simulated Future Endpoint (Pulsing glow)
+        drawCircle(
+            color = futureColor,
+            center = Offset(endX, targetY),
+            radius = 4.5.dp.toPx()
+        )
+        drawCircle(
+            color = futureColor.copy(alpha = 0.35f),
+            center = Offset(endX, targetY),
+            radius = 8.5.dp.toPx()
+        )
     }
 }

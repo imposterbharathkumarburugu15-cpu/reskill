@@ -4,6 +4,8 @@ import android.net.Uri
 import android.widget.MediaController
 import android.widget.VideoView
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -31,19 +34,20 @@ import dev.sovarix.app.ui.theme.*
 import dev.sovarix.core.GameProfileRegistry
 import dev.sovarix.core.SpecialMoment
 import java.io.File
+// File used for video playback
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 /**
- * Flagship Gaming Copilot Screen.
+ * MEDIA-FIRST GAMING HUB
  *
- * Provides a media-first, hardware-accelerated gaming experience:
- * - Standby: Clean prompt to start session
- * - Live: Large game title, duration timer, temperature, performance status
- * - Minimal, truthful screen recording state
- * - Rich media horizontal carousel for Special Moments
- * - Video playback bottom sheet with telemetry
+ * Designed as a premium gaming companion:
+ * - Minimal live gaming HUD with real duration & thermals
+ * - Unobtrusive `● REC` indicator
+ * - Subtle auto-capture toast confirmation
+ * - Cinematic horizontal media carousel for Special Moments
+ * - Full-screen video player bottom sheet with telemetry
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +65,7 @@ fun GameScreen(
     val selectedProfile by gm.selectedGameProfile.collectAsStateWithLifecycle()
     val sessionElapsedSec by gm.sessionElapsedSec.collectAsStateWithLifecycle()
     val moments by gm.moments.collectAsStateWithLifecycle()
+    val isPreservingMoment by gm.isPreservingMoment.collectAsStateWithLifecycle()
     val hasProjection = gm.captureManager.hasProjection()
 
     val currentTemp = s.temperature ?: s.latest?.batteryC ?: 38.2
@@ -79,23 +84,52 @@ fun GameScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         // =========================================================================
-        // 1. GAME INTELLIGENCE / LIVE SESSION HUD
+        // 1. MOMENT CAPTURED NOTIFICATION PILL
+        // =========================================================================
+        AnimatedVisibility(
+            visible = isPreservingMoment,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SovarixCyanSurface)
+                    .border(1.dp, SovarixCyan, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("✦", fontSize = 14.sp, color = SovarixCyan)
+                Text(
+                    text = "MOMENT CAPTURED",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp,
+                    color = SovarixCyanLight
+                )
+                Text("● SAVED", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = SovarixGreen)
+            }
+        }
+
+        // =========================================================================
+        // 2. LIVE GAMING SESSION HUD OR STANDBY PROMPT
         // =========================================================================
         if (isGaming) {
-            // LIVE GAMING HUD
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // LIVE indicator
+                    // Live status & Game Title
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -110,11 +144,19 @@ fun GameScreen(
                             letterSpacing = 1.sp,
                             color = SovarixGreen
                         )
+                        if (hasProjection) {
+                            Text(
+                                text = "● REC",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = SovarixRed
+                            )
+                        }
                     }
 
                     Text(
                         text = "END SESSION",
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
                         color = SovarixRed,
@@ -127,7 +169,6 @@ fun GameScreen(
                     )
                 }
 
-                // Large Game Title
                 Text(
                     text = selectedGame.uppercase(Locale.US),
                     fontSize = 28.sp,
@@ -136,7 +177,6 @@ fun GameScreen(
                     color = SovarixTextPrimary
                 )
 
-                // Session Duration & Thermals
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -144,7 +184,7 @@ fun GameScreen(
                 ) {
                     Text(
                         text = durationFormatted,
-                        fontSize = 36.sp,
+                        fontSize = 38.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = (-1).sp,
                         color = SovarixTextPrimary
@@ -165,63 +205,25 @@ fun GameScreen(
                         )
                     }
                 }
-
-                // Minimal Screen Capture Status
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(SovarixDark)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(if (hasProjection) SovarixRed else SovarixTextMuted)
-                        )
-                        Text(
-                            text = if (hasProjection) "SCREEN CAPTURE ACTIVE" else "SCREEN CAPTURE STANDBY",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (hasProjection) SovarixTextPrimary else SovarixTextMuted
-                        )
-                    }
-
-                    if (!hasProjection) {
-                        Text(
-                            text = "AUTHORIZE",
-                            fontSize = 9.5.sp,
-                            fontWeight = FontWeight.Black,
-                            color = SovarixCyan,
-                            modifier = Modifier.clickable { onRequestScreenCapture() }
-                        )
-                    }
-                }
             }
         } else {
-            // STANDBY MODE
+            // STANDBY MODE (Poetic & Clean)
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "GAME INTELLIGENCE",
-                        fontSize = 20.sp,
+                        text = "GAME",
+                        fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 2.sp,
+                        letterSpacing = 2.5.sp,
                         color = SovarixTextPrimary
                     )
                     Text(
-                        text = "Ready for your session.",
-                        fontSize = 13.sp,
+                        text = "Ready when you are.\nStart a session to let SOVARIX understand your gaming behavior.",
+                        fontSize = 12.5.sp,
+                        lineHeight = 18.sp,
                         color = SovarixTextSecondary
                     )
                 }
@@ -232,8 +234,8 @@ fun GameScreen(
                 ) {
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
+                            .weight(1.2f)
+                            .clip(RoundedCornerShape(14.dp))
                             .background(SovarixCyan)
                             .clickable {
                                 gm.autoStartSession(selectedProfile.packageName)
@@ -247,25 +249,50 @@ fun GameScreen(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = 0.5.sp,
-                            color = SovarixDark
+                            color = SovarixBlack
                         )
                     }
 
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SovarixDark)
-                            .border(1.dp, SovarixBorder, RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(SovarixDarkElevated)
+                            .border(1.dp, SovarixBorder, RoundedCornerShape(14.dp))
                             .clickable { showGamePicker = true }
                             .padding(vertical = 14.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = selectedProfile.gameName.take(12).uppercase(),
-                            fontSize = 11.5.sp,
+                            text = selectedProfile.gameName.take(14).uppercase(Locale.US),
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = SovarixTextSecondary
+                        )
+                    }
+                }
+
+                if (!hasProjection) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SovarixDark)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Screen highlight capture",
+                            fontSize = 11.sp,
+                            color = SovarixTextMuted
+                        )
+                        Text(
+                            text = "AUTHORIZE",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                            color = SovarixCyan,
+                            modifier = Modifier.clickable { onRequestScreenCapture() }
                         )
                     }
                 }
@@ -281,7 +308,7 @@ fun GameScreen(
         )
 
         // =========================================================================
-        // 2. SPECIAL MOMENTS (Media-First Video Gallery)
+        // 3. SPECIAL MOMENTS (Cinematic Media-First Horizontal Carousel)
         // =========================================================================
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -293,26 +320,16 @@ fun GameScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "✦",
-                            fontSize = 13.sp,
-                            color = SovarixCyan
-                        )
-                        Text(
-                            text = "SPECIAL MOMENTS",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.2.sp,
-                            color = SovarixTextPrimary
-                        )
-                    }
+                    Text(
+                        text = "SPECIAL MOMENTS",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp,
+                        color = SovarixTextPrimary
+                    )
                     Text(
                         text = "Captured automatically.",
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = SovarixTextMuted
                     )
                 }
@@ -325,34 +342,40 @@ fun GameScreen(
                         color = SovarixCyan,
                         modifier = Modifier.clickable {
                             gm.triggerMoment(manual = true)
-                            onMessage("Moment triggered!")
+                            onMessage("Moment captured!")
                         }
                     )
                 }
             }
 
             if (moments.isEmpty()) {
-                Box(
+                // Poetic empty state without empty boxes
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(vertical = 28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Clutch gameplay moments, rotation spikes, and key events will appear here.",
-                        fontSize = 12.sp,
-                        color = SovarixTextMuted,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        lineHeight = 18.sp
+                        text = "Nothing captured yet.",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = SovarixTextSecondary
+                    )
+                    Text(
+                        text = "Your next great moment could be here.",
+                        fontSize = 11.5.sp,
+                        color = SovarixTextMuted
                     )
                 }
             } else {
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     items(moments) { moment ->
-                        MomentMediaTile(
+                        MomentCard(
                             moment = moment,
                             onClick = { selectedMomentForPlayback = moment }
                         )
@@ -365,101 +388,84 @@ fun GameScreen(
     }
 
     // =========================================================================
-    // 3. VIDEO PLAYBACK BOTTOM SHEET
+    // 4. FULL SCREEN VIDEO & CONTEXTUAL BOTTOM SHEET
     // =========================================================================
     selectedMomentForPlayback?.let { moment ->
         ModalBottomSheet(
             onDismissRequest = { selectedMomentForPlayback = null },
-            containerColor = SovarixDark
+            containerColor = SovarixDarkElevated,
+            contentColor = SovarixTextPrimary,
+            dragHandle = {
+                Box(
+                    modifier = Modifier
+                        .padding(vertical = 12.dp)
+                        .width(36.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(SovarixBorder)
+                )
+            }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = moment.gameName.uppercase(Locale.US),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Black,
-                        color = SovarixTextPrimary
-                    )
-                    Text(
-                        text = "Score: ${moment.momentScore}/100",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = SovarixCyan
-                    )
-                }
-
-                // Video Surface
-                val file = moment.clipUri?.let { File(it) }
-                if (file != null && file.exists()) {
+                // Video Player
+                val videoFile = moment.clipUri?.let { File(it) }
+                if (videoFile != null && videoFile.exists()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(210.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Color.Black)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.Black),
+                        contentAlignment = Alignment.Center
                     ) {
                         AndroidView(
                             factory = { ctx ->
                                 VideoView(ctx).apply {
-                                    setVideoURI(Uri.fromFile(file))
                                     val mc = MediaController(ctx)
                                     mc.setAnchorView(this)
                                     setMediaController(mc)
-                                    start()
+                                    setVideoURI(Uri.fromFile(videoFile))
+                                    setOnPreparedListener { mp ->
+                                        mp.isLooping = true
+                                        start()
+                                    }
                                 }
                             },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(160.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(SovarixSurface),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Moment preserved as Device Event: ${moment.eventType}",
-                            fontSize = 12.5.sp,
-                            color = SovarixTextSecondary
-                        )
-                    }
                 }
 
-                // Telemetry Facts Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Confidence: ${(moment.confidence * 100).toInt()}%",
-                        fontSize = 11.5.sp,
-                        color = SovarixTextMuted
-                    )
-                    Text(
-                        text = "Thermal: ${moment.temperature?.let { String.format(Locale.US, "%.1f°C", it) } ?: "38.5°C"}",
-                        fontSize = 11.5.sp,
-                        color = SovarixTextSecondary
-                    )
-                }
+                Text(
+                    text = moment.momentType.replace("_", " "),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Black,
+                    color = SovarixTextPrimary
+                )
 
-                Button(
-                    onClick = { selectedMomentForPlayback = null },
-                    colors = ButtonDefaults.buttonColors(containerColor = SovarixSurfaceElevated),
-                    modifier = Modifier.fillMaxWidth()
+                // Moment Metadata
+                val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()) }
+                val timeStr = sdf.format(Date(moment.timestamp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SovarixDark)
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Done", color = SovarixTextPrimary, fontWeight = FontWeight.Bold)
+                    MetadataRow("GAME", moment.gamePackage.substringAfterLast('.'))
+                    MetadataRow("TIMESTAMP", timeStr)
+                    MetadataRow("THERMAL STATE", "${String.format(Locale.US, "%.1f°C", moment.temperature ?: 0.0)} (Status: ${moment.thermalState ?: 0})")
+                    MetadataRow("BATTERY", "${(moment.battery ?: 0.0).toInt()}%")
+                    MetadataRow("PERFORMANCE", if ((moment.confidence) < 0.6) "High Intensity" else "Stable")
                 }
 
                 Spacer(Modifier.height(16.dp))
@@ -467,110 +473,88 @@ fun GameScreen(
         }
     }
 
-    // Game profile picker
+    // Game Picker Dialog
     if (showGamePicker) {
         AlertDialog(
             onDismissRequest = { showGamePicker = false },
-            containerColor = SovarixSurface,
-            title = { Text("Select Game", color = SovarixTextPrimary, fontWeight = FontWeight.Bold) },
+            title = { Text("SELECT GAME PROFILE", fontWeight = FontWeight.Black, color = SovarixTextPrimary) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     GameProfileRegistry.getAllProfiles().forEach { profile ->
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (profile.packageName == selectedProfile.packageName) SovarixCyanSurface else SovarixDark)
+                                .clip(RoundedCornerShape(8.dp))
                                 .clickable {
                                     gm.autoStartSession(profile.packageName)
                                     showGamePicker = false
-                                    onMessage("Selected: ${profile.gameName}")
                                 }
-                                .padding(12.dp)
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(
-                                text = profile.gameName,
-                                color = if (profile.packageName == selectedProfile.packageName) SovarixCyan else SovarixTextPrimary,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Text(profile.gameName, fontWeight = FontWeight.Bold, color = SovarixTextPrimary)
+                            Text(profile.genre.name, fontSize = 10.sp, color = SovarixTextMuted)
                         }
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showGamePicker = false }) {
-                    Text("Cancel", color = SovarixTextSecondary)
-                }
-            }
+            confirmButton = {},
+            containerColor = SovarixDarkElevated
         )
     }
 }
 
 @Composable
-private fun MomentMediaTile(
+private fun MomentCard(
     moment: SpecialMoment,
     onClick: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
-            .width(220.dp)
+            .width(170.dp)
+            .height(115.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(SovarixDark)
+            .background(
+                Brush.verticalGradient(
+                    listOf(SovarixDarkElevated, SovarixDark)
+                )
+            )
             .border(1.dp, SovarixBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .padding(10.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(12.dp),
+        contentAlignment = Alignment.BottomStart
     ) {
-        // Thumbnail preview container
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(125.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(SovarixSurface),
-            contentAlignment = Alignment.Center
-        ) {
-            // Play icon
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(SovarixDark.copy(alpha = 0.8f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("▶", fontSize = 13.sp, color = SovarixCyan)
-            }
-
-            // Score tag
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(SovarixGreenSurface)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Text(
-                    text = "${moment.momentScore}",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = SovarixGreen
-                )
-            }
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = moment.gameName,
-                fontSize = 12.5.sp,
+                text = "▶ VIDEO",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+                color = SovarixCyan
+            )
+            Text(
+                text = moment.momentType.replace("_", " "),
+                fontSize = 11.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = SovarixTextPrimary
+                color = SovarixTextPrimary,
+                maxLines = 1
             )
             Text(
-                text = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date(moment.timestamp)),
+                text = String.format(Locale.US, "%.1f°C", moment.temperature ?: 0.0),
                 fontSize = 10.sp,
-                color = SovarixTextMuted
+                color = SovarixTextSecondary
             )
         }
+    }
+}
+
+@Composable
+private fun MetadataRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = SovarixTextMuted)
+        Text(value, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = SovarixTextPrimary)
     }
 }

@@ -14,6 +14,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontFamily
@@ -24,16 +26,18 @@ import dev.sovarix.app.ui.theme.*
 import dev.sovarix.core.AutoCoolStrategy
 import dev.sovarix.core.ThermalTrend
 import java.util.Locale
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Flagship Thermal Hero: Dynamic Circular Thermal Field.
+ * THE DIGITAL TWIN HERO: Intelligent Energy Field.
  *
- * Makes real device temperature the undisputed visual hero.
- * Reacts to REAL thermal state with restrained, semantic physical visualization.
- * No generic cards or boxes.
+ * The phone's living core with:
+ * - Concentric orbital rings with dynamic velocity
+ * - Micro-particles drifting in the thermal field
+ * - Inward cooling pulse during AUTO-COOL state
+ * - Integrated Live Thermal Trace vector signal
+ * - Clean human-centric state labels: COOL, WARMING, HOT, AUTO-COOL, RECOVERING, STABLE.
  */
 @Composable
 fun LiveDeviceVisualizer(
@@ -46,193 +50,376 @@ fun LiveDeviceVisualizer(
 ) {
     val temp = temperatureC ?: 37.2
     val velocityPerMin = trend?.temperatureVelocity ?: 0.0
-    val delta5Min = velocityPerMin * 5.0
 
-    // Thermal States according to exact prompt specifications:
-    // NORMAL, RISING, HOT, AUTO-COOL, RECOVERY, CRITICAL
+    // Thermal States based on real physical metrics
     val isAutoCoolActive = strategy != AutoCoolStrategy.LEVEL_0_NORMAL
     val isCritical = (thermalStatus ?: 0) >= 4 || temp >= 45.0 || strategy >= AutoCoolStrategy.LEVEL_4_CRITICAL
     val isHot = !isCritical && ((thermalStatus ?: 0) >= 2 || temp >= 40.0)
-    val isRising = !isCritical && !isHot && (velocityPerMin >= 0.15)
-    val isRecovery = !isCritical && !isHot && !isRising && (trend?.isCooling == true || velocityPerMin <= -0.1)
-    val isNormal = !isCritical && !isHot && !isRising && !isRecovery
+    val isWarming = !isCritical && !isHot && (velocityPerMin >= 0.15)
+    val isRecovery = !isCritical && !isHot && !isWarming && (trend?.isCooling == true || velocityPerMin <= -0.1)
+    val isCool = !isCritical && !isHot && !isWarming && !isRecovery && temp < 37.0
+    val isStable = !isCritical && !isHot && !isWarming && !isRecovery && !isCool
 
-    // Semantic state label
+    // Human-centric semantic state label
     val stateLabel = when {
         isCritical -> "CRITICAL THERMAL"
         isAutoCoolActive -> "AUTO-COOL ACTIVE"
         isHot -> "THERMAL HIGH"
-        isRising -> "THERMAL RISING"
-        isRecovery -> "THERMAL RECOVERING"
-        else -> "COOL / STABLE"
+        isWarming -> "THERMAL RISING"
+        isRecovery -> "RECOVERING"
+        isCool -> "COOL / STABLE"
+        else -> "STABLE"
     }
 
-    // Semantic colors
-    val primaryColor = when {
+    // Dynamic semantic palette
+    val coreColor = when {
         isCritical -> SovarixRed
         isHot -> SovarixOrange
-        isRising -> SovarixAmber
-        isAutoCoolActive -> SovarixAmber
+        isWarming -> SovarixAmber
+        isAutoCoolActive -> SovarixCyan
         isRecovery -> SovarixGreen
         else -> SovarixCyan
     }
 
-    val secondaryColor = when {
-        isCritical -> SovarixRed.copy(alpha = 0.35f)
-        isHot -> SovarixOrange.copy(alpha = 0.3f)
-        isRising -> SovarixAmber.copy(alpha = 0.25f)
-        isRecovery -> SovarixGreen.copy(alpha = 0.3f)
-        else -> SovarixCyan.copy(alpha = 0.2f)
+    val glowColor = when {
+        isCritical -> SovarixRed
+        isHot -> SovarixOrange
+        isWarming -> SovarixAmber
+        isAutoCoolActive -> SovarixCyan
+        isRecovery -> SovarixGreen
+        else -> SovarixCyanLight
     }
 
-    // Restrained, non-excessive animation cycles
-    val animationDuration = when {
-        isCritical -> 900
-        isHot -> 1400
-        isRising -> 2000
-        else -> 3400
+    // Dynamic animation speeds: faster motion when warm/hot, calm when cool/recovering
+    val orbitCycleMs = when {
+        isCritical -> 1800
+        isHot -> 2400
+        isWarming -> 3600
+        isAutoCoolActive -> 3000
+        else -> 6000
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "thermalFieldTransition")
-    val pulse by infiniteTransition.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.04f,
+    val pulseDurationMs = when {
+        isCritical -> 800
+        isHot -> 1200
+        isWarming -> 1800
+        else -> 2600
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "digitalTwinCore")
+
+    // Breathing pulse for core glow
+    val breathingPulse by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
         animationSpec = infiniteRepeatable(
-            animation = tween(animationDuration, easing = FastOutSlowInEasing),
+            animation = tween(pulseDurationMs, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "thermalPulse"
+        label = "breathingPulse"
     )
 
-    val rotationAngle by infiniteTransition.animateFloat(
+    // Orbital ring 1 rotation
+    val orbit1Angle by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(animationDuration * 7, easing = LinearEasing),
+            animation = tween(orbitCycleMs, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "orbitalAngle"
+        label = "orbit1Angle"
     )
 
-    Box(
+    // Orbital ring 2 counter-rotation
+    val orbit2Angle by infiniteTransition.animateFloat(
+        initialValue = 360f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween((orbitCycleMs * 1.4f).toInt(), easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "orbit2Angle"
+    )
+
+    // Inward cooling pulse for Auto-Cool: travels from outside ring (1.0f) inward to core (0.2f)
+    val inwardCoolingPulse by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "inwardCoolingPulse"
+    )
+
+    // Signal waveform phase for live thermal trace
+    val tracePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "tracePhase"
+    )
+
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(260.dp)
             .clip(CircleShape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
             ),
-        contentAlignment = Alignment.Center
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Dynamic Circular Thermal Energy Field
-        Canvas(modifier = Modifier.size(240.dp)) {
-            val center = Offset(size.width / 2f, size.height / 2f)
-            val baseRadius = (size.minDimension / 2f) * 0.76f
-
-            // Outer soft ambient thermal glow
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(primaryColor.copy(alpha = 0.12f * pulse), Color.Transparent),
-                    center = center,
-                    radius = baseRadius * 1.32f * pulse
-                ),
-                center = center,
-                radius = baseRadius * 1.32f * pulse
-            )
-
-            // Inner subtle background disc
-            drawCircle(
-                color = SovarixDark.copy(alpha = 0.6f),
-                center = center,
-                radius = baseRadius * 0.88f
-            )
-
-            // Dynamic pulsing outer thermal ring
-            drawCircle(
-                brush = Brush.sweepGradient(
-                    listOf(
-                        primaryColor.copy(alpha = 0.75f),
-                        secondaryColor,
-                        primaryColor.copy(alpha = 0.15f),
-                        primaryColor.copy(alpha = 0.75f)
-                    ),
-                    center = center
-                ),
-                center = center,
-                radius = baseRadius * pulse,
-                style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
-            )
-
-            // Single orbital indicator particle
-            val rad = Math.toRadians(rotationAngle.toDouble())
-            val orbitalX = center.x + (baseRadius * pulse) * cos(rad).toFloat()
-            val orbitalY = center.y + (baseRadius * pulse) * sin(rad).toFloat()
-            drawCircle(
-                color = primaryColor,
-                center = Offset(orbitalX, orbitalY),
-                radius = 3.5.dp.toPx()
-            )
-        }
-
-        // Center Content: Hero Temperature & Semantic States
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(270.dp),
+            contentAlignment = Alignment.Center
         ) {
-            // Visual Hero Temperature (Very Large Typography)
-            Text(
-                text = String.format(Locale.US, "%.1f°", temp),
-                fontSize = 52.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-2).sp,
-                color = SovarixTextPrimary,
-                fontFamily = FontFamily.SansSerif
-            )
+            // Intelligent Digital Twin Energy Field Canvas
+            Canvas(modifier = Modifier.size(260.dp)) {
+                val center = Offset(size.width / 2f, size.height / 2f)
+                val coreRadius = (size.minDimension / 2f) * 0.74f
 
-            Spacer(Modifier.height(2.dp))
+                // 1. Outer Deep Atmospheric Glow
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            glowColor.copy(alpha = 0.16f * breathingPulse),
+                            glowColor.copy(alpha = 0.04f),
+                            Color.Transparent
+                        ),
+                        center = center,
+                        radius = coreRadius * 1.4f * breathingPulse
+                    ),
+                    center = center,
+                    radius = coreRadius * 1.4f * breathingPulse
+                )
 
-            // Semantic Status Label
-            Text(
-                text = stateLabel,
-                fontSize = 11.5.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 1.2.sp,
-                color = primaryColor
-            )
+                // 2. Dark Circular Digital Twin Core
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            SovarixDarkElevated.copy(alpha = 0.85f),
+                            SovarixBlack.copy(alpha = 0.95f)
+                        ),
+                        center = center,
+                        radius = coreRadius * 0.88f
+                    ),
+                    center = center,
+                    radius = coreRadius * 0.88f
+                )
 
-            Spacer(Modifier.height(4.dp))
+                // 3. Thin Inner Orbital Ring (Dashed)
+                val innerOrbitRadius = coreRadius * 0.82f
+                drawCircle(
+                    color = coreColor.copy(alpha = 0.22f),
+                    center = center,
+                    radius = innerOrbitRadius,
+                    style = Stroke(
+                        width = 1.2.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 16f), orbit2Angle)
+                    )
+                )
 
-            // Rate of change: ↑ +0.7°C / 5 min
-            val arrow = if (delta5Min > 0.05) "↑" else if (delta5Min < -0.05) "↓" else "•"
-            val sign = if (delta5Min > 0) "+" else if (delta5Min < 0) "-" else ""
-            val rateText = "$arrow $sign${String.format(Locale.US, "%.1f", abs(delta5Min))}°C / 5 min"
+                // 4. Outer Thermal Gradient Ring
+                drawCircle(
+                    brush = Brush.sweepGradient(
+                        listOf(
+                            coreColor.copy(alpha = 0.85f),
+                            glowColor.copy(alpha = 0.30f),
+                            coreColor.copy(alpha = 0.05f),
+                            coreColor.copy(alpha = 0.85f)
+                        ),
+                        center = center
+                    ),
+                    center = center,
+                    radius = coreRadius * breathingPulse,
+                    style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round)
+                )
 
-            Text(
-                text = rateText,
-                fontSize = 10.5.sp,
-                fontWeight = FontWeight.Bold,
-                color = SovarixTextSecondary,
-                letterSpacing = 0.5.sp
-            )
+                // 5. Inward Cooling Wave (Active during AUTO-COOL)
+                if (isAutoCoolActive) {
+                    val coolRadius = coreRadius * inwardCoolingPulse
+                    val coolAlpha = (inwardCoolingPulse - 0.25f).coerceIn(0f, 1f) * 0.6f
+                    drawCircle(
+                        color = SovarixCyan.copy(alpha = coolAlpha),
+                        center = center,
+                        radius = coolRadius,
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
 
-            Spacer(Modifier.height(6.dp))
+                // 6. Orbiting Data Particles
+                val rad1 = Math.toRadians(orbit1Angle.toDouble())
+                val particle1X = center.x + (coreRadius * breathingPulse) * cos(rad1).toFloat()
+                val particle1Y = center.y + (coreRadius * breathingPulse) * sin(rad1).toFloat()
+                drawCircle(
+                    color = coreColor,
+                    center = Offset(particle1X, particle1Y),
+                    radius = 3.6.dp.toPx()
+                )
+                // Particle 1 trailing flare
+                drawCircle(
+                    color = glowColor.copy(alpha = 0.45f),
+                    center = Offset(particle1X, particle1Y),
+                    radius = 7.dp.toPx()
+                )
 
-            // Human-centric outcome subtext
-            val verdict = when {
-                isAutoCoolActive -> "Auto-Cool is reducing available workload."
-                isCritical -> "Device temperature is critical."
-                else -> "AUTO-COOL ARMED"
+                // Counter-orbiting secondary data point
+                val rad2 = Math.toRadians(orbit2Angle.toDouble())
+                val particle2X = center.x + innerOrbitRadius * cos(rad2).toFloat()
+                val particle2Y = center.y + innerOrbitRadius * sin(rad2).toFloat()
+                drawCircle(
+                    color = glowColor.copy(alpha = 0.75f),
+                    center = Offset(particle2X, particle2Y),
+                    radius = 2.2.dp.toPx()
+                )
+
+                // Ambient tertiary micro-particles around the core
+                val microParticleCount = if (isWarming || isHot || isCritical) 5 else 3
+                for (i in 0 until microParticleCount) {
+                    val pAngle = Math.toRadians((orbit1Angle * (1.2 + i * 0.3) + i * 72).toDouble())
+                    val pDist = coreRadius * (0.65f + 0.18f * (i % 2))
+                    val px = center.x + pDist * cos(pAngle).toFloat()
+                    val py = center.y + pDist * sin(pAngle).toFloat()
+                    drawCircle(
+                        color = coreColor.copy(alpha = 0.35f),
+                        center = Offset(px, py),
+                        radius = 1.4.dp.toPx()
+                    )
+                }
             }
 
-            Text(
-                text = verdict,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp,
-                color = if (isAutoCoolActive) SovarixAmber else SovarixTextMuted
-            )
+            // Center Content: Hero Typography & Digital Twin State
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Large Hero Temperature
+                Text(
+                    text = String.format(Locale.US, "%.1f°", temp),
+                    fontSize = 56.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = (-2.5).sp,
+                    color = SovarixTextPrimary,
+                    fontFamily = FontFamily.SansSerif
+                )
+
+                Spacer(Modifier.height(2.dp))
+
+                // Living Semantic State Label
+                Text(
+                    text = stateLabel,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    letterSpacing = 1.5.sp,
+                    color = coreColor
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                // Human-centric outcome subtext
+                val verdict = when {
+                    isAutoCoolActive -> "Auto-Cool is reducing available workload."
+                    isCritical -> "Device temperature is critical."
+                    isHot -> "Thermal load is elevated."
+                    isWarming -> "Thermal trend rising."
+                    isRecovery -> "Thermal conditions returning to normal."
+                    else -> "Auto-Cool armed"
+                }
+
+                Text(
+                    text = verdict,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp,
+                    color = if (isAutoCoolActive) SovarixCyan else SovarixTextSecondary
+                )
+            }
         }
+
+        // Live Thermal Trace: Miniature live signal trace directly below the hero
+        LiveThermalTrace(
+            velocityPerMin = velocityPerMin,
+            color = coreColor,
+            phase = tracePhase,
+            modifier = Modifier
+                .width(180.dp)
+                .height(22.dp)
+        )
+    }
+}
+
+/**
+ * Miniature Live Signal Trace.
+ * Vector sparkline displaying the real thermal trajectory (rising / stable / falling).
+ */
+@Composable
+private fun LiveThermalTrace(
+    velocityPerMin: Double,
+    color: Color,
+    phase: Float,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val midY = h / 2f
+
+        // Slope is driven by real temperature velocity (°C/min)
+        // positive velocity tilts upward to the right, negative velocity tilts downward
+        val slopeY = when {
+            velocityPerMin >= 0.15 -> -h * 0.32f
+            velocityPerMin <= -0.1 -> h * 0.32f
+            else -> 0f
+        }
+
+        val path = Path().apply {
+            moveTo(0f, midY)
+            cubicTo(
+                w * 0.25f, midY,
+                w * 0.45f, midY + slopeY * 0.5f,
+                w * 0.70f, midY + slopeY
+            )
+            lineTo(w, midY + slopeY)
+        }
+
+        // Faint baseline
+        drawLine(
+            color = color.copy(alpha = 0.12f),
+            start = Offset(0f, midY),
+            end = Offset(w, midY),
+            strokeWidth = 1.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 8f))
+        )
+
+        // Live signal path
+        drawPath(
+            path = path,
+            color = color.copy(alpha = 0.75f),
+            style = Stroke(
+                width = 1.8.dp.toPx(),
+                cap = StrokeCap.Round
+            )
+        )
+
+        // Leading glowing signal head
+        val headX = w
+        val headY = midY + slopeY
+        drawCircle(
+            color = color,
+            center = Offset(headX, headY),
+            radius = 2.4.dp.toPx()
+        )
+        drawCircle(
+            color = color.copy(alpha = 0.35f),
+            center = Offset(headX, headY),
+            radius = 5.dp.toPx()
+        )
     }
 }

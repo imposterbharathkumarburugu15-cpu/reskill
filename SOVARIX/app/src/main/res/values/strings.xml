@@ -52,13 +52,13 @@
     <string name="thermal_alert_title">SOVARIX · Thermal Alert</string>
     <string name="thermal_alert_body">Your phone is heating during gaming.</string>
     <string name="thermal_warning_title">SOVARIX · Thermal Warning</string>
-    <string name="thermal_warning_body">Your phone is getting hot. Gaming performance may decrease.</string>
+    <string name="thermal_warning_body">Thermal load is high. Performance may decrease.</string>
     <string name="thermal_autocool_title">SOVARIX · Auto-Cool</string>
-    <string name="thermal_autocool_body">Thermal load is rising. Auto-Cool is monitoring recovery.</string>
+    <string name="thermal_autocool_body">Auto-Cool is active. Monitoring recovery.</string>
     <string name="thermal_stable_title">SOVARIX · Thermal Stable</string>
-    <string name="thermal_stable_body">Your phone is cooling back toward normal.</string>
+    <string name="thermal_stable_body">Thermal conditions are returning to normal.</string>
     <string name="critical_thermal_title">SOVARIX · Critical Thermal State</string>
-    <string name="critical_thermal_body">Device temperature is critical. Stop gaming and allow the device to cool.</string>
+    <string name="critical_thermal_body">Device temperature is critical. Stop gaming and allow it to cool.</string>
 
     <!-- Legacy / Multilingual Fallbacks -->
     <string name="thermal_shield_title">SOVARIX · Thermal Warning</string>

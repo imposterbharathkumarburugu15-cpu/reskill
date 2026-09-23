@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -48,9 +50,10 @@ enum class SovarixTab(
 }
 
 /**
- * Native Android Flagship Bottom Navigation Bar.
- * Strictly avoids emoji icons in favor of native vector geometry.
- * Employs animated accent transitions and a subtle under-tab indicator.
+ * Floating Dynamic Navigation Surface.
+ * Avoids heavy rectangular bars; sits as a sleek floating capsule.
+ * Selected tab: bright cyan/white with animated glowing pill indicator.
+ * Unselected: muted gray.
  */
 @Composable
 fun SovarixBottomNav(
@@ -59,23 +62,27 @@ fun SovarixBottomNav(
     isGamingActive: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(SovarixDark)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.Center
     ) {
-        // Subtle top separator line
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(SovarixBorder)
-        )
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .clip(RoundedCornerShape(26.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            SovarixDarkElevated.copy(alpha = 0.94f),
+                            SovarixBlack.copy(alpha = 0.98f)
+                        )
+                    )
+                )
+                .border(1.dp, SovarixBorder, RoundedCornerShape(26.dp))
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -83,34 +90,34 @@ fun SovarixBottomNav(
                 val isSelected = tab == selectedTab
 
                 val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) SovarixCyan else SovarixTextMuted,
-                    animationSpec = tween(220),
+                    targetValue = if (isSelected) SovarixCyanLight else SovarixTextMuted,
+                    animationSpec = tween(200),
                     label = "iconColor"
                 )
 
                 val indicatorWidth by animateDpAsState(
-                    targetValue = if (isSelected) 20.dp else 0.dp,
+                    targetValue = if (isSelected) 18.dp else 0.dp,
                     animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
                     label = "indicatorWidth"
                 )
 
                 Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { onTabSelected(tab) }
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = stringResource(tab.labelRes),
                             tint = iconColor,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
 
                         // Subtle active gaming pulse dot on GAME tab
@@ -128,19 +135,21 @@ fun SovarixBottomNav(
 
                     Text(
                         text = stringResource(tab.labelRes),
-                        fontSize = 9.5.sp,
-                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                        fontSize = 9.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         letterSpacing = 0.6.sp,
                         color = iconColor
                     )
 
-                    // Subtle animated active tab pill
+                    // Floating glowing indicator under selected tab
                     Box(
                         modifier = Modifier
                             .width(indicatorWidth)
                             .height(2.dp)
-                            .clip(RoundedCornerShape(1.dp))
-                            .background(if (isSelected) SovarixCyan else Color.Transparent)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) SovarixCyan else Color.Transparent
+                            )
                     )
                 }
             }

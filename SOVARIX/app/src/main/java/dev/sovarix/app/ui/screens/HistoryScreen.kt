@@ -16,13 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.sovarix.app.R
 import dev.sovarix.app.TwinRepository
 import dev.sovarix.app.ui.theme.*
 import dev.sovarix.core.BlackBoxEvent
@@ -40,13 +38,13 @@ fun MemoryScreen(
 }
 
 /**
- * Flagship Memory Screen: "Your phone remembers."
+ * MEMORY: "THE PHONE REMEMBERS."
  *
- * An organic chronological timeline of your phone's behavioral history.
- * Replaces technical database cards with a story timeline:
- * - TODAY section
- * - Timestamped physical milestones (Gaming, Thermal, Prediction, Intervention, Recovery)
- * - Black Box export
+ * Chronological visual timeline of the device's behavioral history:
+ * - Gaming start & completion
+ * - Thermal rise, Auto-Cool mitigation, and Recovery milestones
+ * - Special Moment media attachments embedded inline
+ * - Flight recorder audit log with SHA-256 integrity and export
  */
 @Composable
 fun HistoryScreen(
@@ -55,6 +53,7 @@ fun HistoryScreen(
     modifier: Modifier = Modifier
 ) {
     val events by repo.blackBoxEvents.collectAsStateWithLifecycle()
+    val moments by repo.gamingManager.moments.collectAsStateWithLifecycle()
     var expandedEventId by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -74,13 +73,13 @@ fun HistoryScreen(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = "MEMORY",
-                    fontSize = 20.sp,
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 2.sp,
+                    letterSpacing = 2.5.sp,
                     color = SovarixTextPrimary
                 )
                 Text(
-                    text = "Your phone remembers.",
+                    text = "The phone remembers.",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = SovarixCyan
@@ -91,14 +90,14 @@ fun HistoryScreen(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .background(SovarixDark)
+                    .background(SovarixDarkElevated)
                     .border(1.dp, SovarixBorder, RoundedCornerShape(16.dp))
                     .clickable(onClick = onExport)
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = "EXPORT",
-                    fontSize = 9.5.sp,
+                    text = "EXPORT LOG",
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 0.8.sp,
                     color = SovarixCyan
@@ -107,9 +106,9 @@ fun HistoryScreen(
         }
 
         // =========================================================================
-        // 2. TIMELINE OF EXPERIENCES
+        // 2. CHRONOLOGICAL TIMELINE
         // =========================================================================
-        if (events.isEmpty()) {
+        if (events.isEmpty() && moments.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -135,7 +134,7 @@ fun HistoryScreen(
                         text = "TODAY",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        letterSpacing = 1.5.sp,
+                        letterSpacing = 1.8.sp,
                         color = SovarixTextMuted
                     )
                 }
@@ -164,10 +163,10 @@ private fun TimelineMilestoneItem(
 
     val (title, dotColor) = when (event.eventType) {
         "GAMING_STARTED", "SESSION_START" -> "Gaming started" to SovarixCyan
-        "THERMAL_ALERT", "THERMAL_TREND_RISING" -> "Thermal trend rising" to SovarixAmber
+        "THERMAL_ALERT", "THERMAL_TREND_RISING" -> "Thermal rising" to SovarixAmber
         "AUTO_COOL_STARTED", "PROTECT_ACTIVATED" -> "Auto-Cool activated" to SovarixOrange
-        "AUTO_COOL_VERIFIED", "AUTO_COOL_RECOVERY", "RECOVERY" -> "Thermal recovery" to SovarixGreen
-        "SESSION_STOP", "NORMAL_RESTORED" -> "Normal state restored" to SovarixGreen
+        "AUTO_COOL_VERIFIED", "AUTO_COOL_RECOVERY", "RECOVERY" -> "Recovery detected" to SovarixGreen
+        "SESSION_STOP", "NORMAL_RESTORED" -> "Stable" to SovarixGreen
         "MOMENT_CAPTURED", "SPECIAL_MOMENT" -> "Special Moment captured" to SovarixCyan
         "PREDICTION_MADE" -> "Temperature predicted to rise" to SovarixTextSecondary
         "EXPERIMENT_STARTED" -> "Diagnostic test started" to SovarixCyan
