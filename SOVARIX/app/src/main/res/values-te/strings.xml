@@ -1,0 +1,165 @@
+<resources>
+    <!-- Brand & Identity -->
+    <string name="app_name">SOVARIX</string>
+    <string name="app_tagline">మీ ఫోన్‌కు తెలుసు. ఇప్పుడు అర్థం చేసుకుంటుంది.</string>
+    <string name="brand_product">SOVARIX</string>
+    <string name="brand_thermal_shield">థర్మల్ షీల్డ్</string>
+    <string name="brand_auto_cool">ఆటో-కూల్</string>
+    <string name="brand_device_dna">డివైస్ DNA 2.0</string>
+    <string name="brand_phone_lab">ఫోన్ ల్యాబ్</string>
+
+    <!-- Navigation Tabs -->
+    <string name="tab_home">హోమ్</string>
+    <string name="tab_lab">ల్యాబ్</string>
+    <string name="tab_game">గేమ్</string>
+    <string name="tab_memory">మెమొరీ</string>
+    <string name="tab_device">డివైస్</string>
+
+    <!-- Product States & Hero Verdicts -->
+    <string name="state_aware">అవేర్</string>
+    <string name="state_alert">అలర్ట్</string>
+    <string name="state_protect">రక్షణ</string>
+    <string name="state_recovery">రికవరీ</string>
+    <string name="status_cool_stable">చల్లగా / స్థిరంగా ఉంది</string>
+    <string name="status_nominal">సాధారణం</string>
+    <string name="status_active">సిస్టమ్ సక్రియంగా ఉంది</string>
+    <string name="verdict_healthy">ఫోన్ ఆరోగ్యకరమైన స్థితిలో ఉంది</string>
+    <string name="verdict_rising">ఉష్ణోగ్రత పెరుగుతోంది</string>
+    <string name="verdict_shield">రక్షణ సక్రియంగా ఉంది</string>
+    <string name="verdict_cooling">సాధారణ స్థాయికి చల్లబడుతోంది</string>
+
+    <!-- Contextual Status Ribbon -->
+    <string name="hero_tagline">మీ ఫోన్‌కు తెలుసు. ఇప్పుడు అర్థం చేసుకుంటుంది.</string>
+    <string name="status_monitoring">సిస్టమ్ సక్రియంగా ఉంది</string>
+    <string name="label_battery">%1$d%% బ్యాటరీ</string>
+    <string name="label_ram_free">%1$s GB RAM</string>
+    <string name="label_thermal_light">థర్మల్ లైట్</string>
+    <string name="label_thermal_warm">థర్మల్ వెచ్చగా ఉంది</string>
+    <string name="label_performance_stable">పనితీరు స్థిరంగా ఉంది</string>
+    <string name="label_performance_throttled">పనితీరు తగ్గించబడింది</string>
+    <string name="label_current_activity">ప్రస్తుత కార్యాచరణ</string>
+    <string name="label_no_game_active">డివైస్ స్టాండ్‌బై</string>
+    <string name="label_sovarix_insight">SOVARIX అంతర్దృష్టి</string>
+    <string name="insight_cooler_than_avg">మీ ఫోన్ ఇటీవలి సగటు కంటే చల్లగా ఉంది.</string>
+    <string name="device_dna_subtitle">%1$d గమనించిన సెషన్ల నుండి నేర్చుకున్న ప్రవర్తనా మోడల్</string>
+    <string name="device_dna_learned_behavior">గుర్తించబడిన పరికర ప్రవర్తన</string>
+    <string name="device_dna_empty_learning">మీ ఫోన్ ఇటీవలి సగటు కంటే చల్లగా ఉంది.</string>
+    <string name="game_subtitle_active">సక్రియ గేమింగ్ సెషన్ · తక్కువ-లేటెన్సీ మానిటరింగ్</string>
+    <string name="game_subtitle_standby">స్వయంప్రతిపత్తి గేమ్ కోపైలట్ · స్టాండ్‌బై</string>
+    <string name="lab_what_if_hero">ఒకవేళ ఇలా జరిగితే...</string>
+
+    <!-- Thermal Notifications (Exact Prompt Copy for Telugu) -->
+    <string name="thermal_alert_title">SOVARIX · థర్మల్ హెచ్చరిక</string>
+    <string name="thermal_alert_body">గేమింగ్ సమయంలో మీ ఫోన్ వేడెక్కుతోంది%1$s%2$s.</string>
+    <string name="thermal_shield_title">SOVARIX · థర్మల్ షీల్డ్</string>
+    <string name="thermal_shield_body">థర్మల్ ఒత్తిడి గుర్తించబడింది%1$s. రక్షణ సక్రియంగా ఉంది.</string>
+    <string name="thermal_recovery_title">SOVARIX · థర్మల్ రికవరీ</string>
+    <string name="thermal_recovery_body">మీ ఫోన్ సాధారణ ఉష్ణోగ్రత స్థితికి తిరిగి వస్తోంది%1$s.</string>
+    <string name="critical_thermal_title">SOVARIX · క్రిటికల్ థర్మల్ స్థితి</string>
+    <string name="critical_thermal_body">మీ పరికరం చాలా వేడిగా ఉంది%1$s. గేమింగ్ ఆపి చల్లబరచండి.</string>
+
+    <!-- Lab / Experiment Engine -->
+    <string name="lab_title">ఫోన్ ప్రయోగ ఇంజిన్</string>
+    <string name="lab_subtitle">మీ ఫోన్ ప్రవర్తనా మోడల్ ఆధారంగా వాస్తవిక అనుకరణ.</string>
+    <string name="lab_what_if">ఒకవేళ ఇలా జరిగితే...</string>
+    <string name="lab_empirical_twin">అనుభవపూర్వక ట్విన్</string>
+    <string name="lab_current_path">ప్రస్తుత మార్గం</string>
+    <string name="lab_alternative_path">ప్రత్యామ్నాయ మార్గం</string>
+    <string name="lab_path_comparison">మార్గాంతర పోలిక</string>
+    <string name="lab_no_hardware_change">హార్డ్‌వేర్‌లో మార్పు లేదు</string>
+    <string name="lab_thermal_delta">అంచనా వేసిన ఉష్ణోగ్రత మార్పు</string>
+    <string name="lab_battery_delta">అంచనా వేసిన బ్యాటరీ మార్పు</string>
+    <string name="lab_unsupported_title">ఈ అంశానికి అనుకరణ అందుబాటులో లేదు</string>
+    <string name="lab_unsupported_body">ఫలితాలను ఊహించలేము. SOVARIX కేవలం వాస్తవ హార్డ్‌వేర్ సిగ్నల్స్‌ను మాత్రమే మోడల్ చేస్తుంది.</string>
+    <string name="lab_test_levers">సిస్టమ్ నియంత్రణలను పరీక్షించండి</string>
+    <string name="lab_levers_disclaimer">ఫోన్ హార్డ్‌వేర్‌లో ఎలాంటి మార్పు జరగదు. అన్ని ప్రయోగాలు డిజిటల్ ట్విన్ మోడల్ ద్వారా మాత్రమే జరుగుతాయి.</string>
+    <string name="query_game_hour">ఇంకో గంట గేమ్ ఆడితే ఏమవుతుంది?</string>
+    <string name="query_record_game">గేమ్ ఆడుతూ రికార్డ్ చేస్తే ఏమవుతుంది?</string>
+    <string name="query_charge_game">ఛార్జింగ్ పెట్టి గేమ్ ఆడితే ఏమవుతుంది?</string>
+    <string name="query_reduce_workload">వర్క్‌లోడ్ తగ్గిస్తే ఏమవుతుంది?</string>
+    <string name="query_stop_capture">స్క్రీన్ రికార్డింగ్ ఆపితే ఏమవుతుంది?</string>
+    <string name="query_thermal_continues">వేడి ఇలాగే కొనసాగితే ఏమవుతుంది?</string>
+
+    <!-- Game Screen -->
+    <string name="game_title">గేమ్ ఇంటెలిజెన్స్</string>
+    <string name="game_active_subtitle">యాక్టివ్ గేమింగ్ సెషన్ · ప్రత్యక్ష పర్యవేక్షణ</string>
+    <string name="game_standby_subtitle">స్వయంప్రతిపత్తి గేమ్ కోపైలట్ · సిద్ధంగా ఉంది</string>
+    <string name="game_special_moments">ప్రత్యేక క్షణాలు</string>
+    <string name="game_special_moments_subtitle">గేమింగ్ టెలిమెట్రీ నుండి ఆటోమేటిక్‌గా రికార్డ్ చేయబడిన క్లిప్‌లు</string>
+    <string name="game_no_moments">ఈ సెషన్‌లో ఇంకా ఎలాంటి ప్రత్యేక క్షణాలు నమోదు కాలేదు.</string>
+    <string name="game_live_capture_active">లైవ్ స్క్రీన్ క్యాప్చర్ సక్రియంగా ఉంది</string>
+    <string name="game_capture_unavailable">స్క్రీన్ క్యాప్చర్ స్టాండ్‌బై (అనుమతి కోసం తాకండి)</string>
+    <string name="game_session_ended">గేమింగ్ సెషన్ ముగిసింది</string>
+
+    <!-- Memory Screen -->
+    <string name="memory_title">మెమొరీ</string>
+    <string name="memory_subtitle">మీ ఫోన్ అనుభవించిన సమస్త సమాచారం.</string>
+    <string name="memory_tab_timeline">కాలక్రమం</string>
+    <string name="memory_tab_technical">సాంకేతిక వివరాలు</string>
+    <string name="memory_recent_experiences">ఇటీవలి అనుభవాలు</string>
+    <string name="memory_empty">ఇంకా ఎలాంటి సంఘటనలు నమోదు కాలేదు. గేమింగ్ సెషన్‌లు, థర్మల్ ధోరణులు మరియు రికవరీ ఇక్కడ కనిపిస్తాయి.</string>
+    <string name="memory_sha256_title">SHA-256 హాష్ చైన్</string>
+    <string name="memory_sha256_verified">భద్రతా సమగ్రత: ధృవీకరించబడింది</string>
+    <string name="memory_sha256_warning">సమగ్రత హెచ్చరిక</string>
+    <string name="memory_secure">సురక్షితం</string>
+    <string name="memory_corrupted">దెబ్బతిన్నది</string>
+
+    <!-- Device Screen & Settings -->
+    <string name="device_title">డివైస్ ఇంటెలిజెన్స్</string>
+    <string name="device_subtitle">డివైస్ DNA 2.0, ఆటోపायलట్ లక్ష్యాలు, హార్డ్‌వేర్ ప్రొఫైల్ మరియు విశ్లేషణ.</string>
+    <string name="device_language_title">భాష / LANGUAGE / भाषा</string>
+    <string name="device_language_subtitle">మీకు నచ్చిన భాషను ఎంచుకోండి. యాప్ వెంటనే మారుతుంది.</string>
+    <string name="device_autopilot_goal">ఆటోపायलట్ లక్ష్యం</string>
+    <string name="device_autopilot_apis">అధికారిక ఆండ్రాయిడ్ APIలు మాత్రమే</string>
+    <string name="device_autopilot_subtitle">పనితీరు, ఉష్ణోగ్రత మరియు బ్యాటరీలను సమతుల్యం చేయడంలో SOVARIX దేనికి ప్రాధాన్యత ఇవ్వాలో ఎంచుకోండి.</string>
+    <string name="goal_cool">నా ఫోన్‌ను చల్లగా ఉంచండి</string>
+    <string name="goal_battery">బ్యాటరీని ఆదా చేయండి</string>
+    <string name="goal_gaming">స్థిరమైన గేమింగ్ పనితీరును కొనసాగించండి</string>
+    <string name="goal_overhead">SOVARIX లోడ్ తగ్గించండి</string>
+    <string name="goal_recording">రికార్డింగ్‌కు ప్రాధాన్యత ఇవ్వండి</string>
+    <string name="device_dna_title">మీ డివైస్ DNA 2.0</string>
+    <string name="dna_thermal_response">థర్మల్ స్పందన</string>
+    <string name="dna_gaming_endurance">గేమింగ్ స్థిరత్వం</string>
+    <string name="dna_recovery_behavior">రికవరీ ప్రవర్తన</string>
+    <string name="dna_battery_response">బ్యాటరీ సమర్థత</string>
+    <string name="dna_learned_behavior">గుర్తించిన పరికర ప్రవర్తన</string>
+    <string name="device_forensics_title">డివైస్ ఫోరెన్సిక్స్ &amp; రిపేర్ బేస్‌లైన్</string>
+    <string name="device_forensics_subtitle">దీర్ఘకాలిక ఉష్ణోగ్రత మార్పులను ట్రాక్ చేస్తుంది మరియు రిపేర్ తర్వాత పనితీరును పోలుస్తుంది.</string>
+    <string name="btn_capture_baseline">బేస్‌లైన్ నమోదు చేయండి</string>
+    <string name="btn_post_repair">రిపేర్ తర్వాతి రికార్డ్</string>
+    <string name="device_overhead_title">SOVARIX ఎంత వనరులను వాడుకుంటుంది?</string>
+    <string name="device_overhead_subtitle">SOVARIX ఎప్పటికీ మీ ఫోన్‌కు సమస్యగా మారకుండా తన సొంత వనరుల వినియోగాన్ని పారదర్శకంగా వెల్లడిస్తుంది.</string>
+    <string name="overhead_cpu">CPU వినియోగం</string>
+    <string name="overhead_memory">మెమొరీ (PSS)</string>
+    <string name="overhead_sampling">శాంప్లింగ్ రేటు</string>
+    <string name="overhead_battery">బ్యాటరీ ప్రభావం</string>
+    <string name="btn_export_json">బ్లాక్ బాక్స్ JSON ఎగుమతి</string>
+    <string name="btn_purge_history">చరిత్రను తొలగించండి</string>
+    <string name="privacy_title">గోప్యత &amp; స్థానిక భద్రత</string>
+    <string name="privacy_body">SOVARIX పూర్తిగా మీ ఫోన్‌లోనే పనిచేస్తుంది. ఎలాంటి డేటా, స్క్రీన్ ఫ్రేమ్‌లు, ఆడియో లేదా గేమింగ్ సమాచారం క్లౌడ్‌కు పంపబడదు. లోకల్ AI మీ పరికరంలోనే రన్ అవుతుంది.</string>
+
+    <!-- Errors & Toast Messages -->
+    <string name="perm_screen_capture_required">స్క్రీన్ క్యాప్చర్ కోసం అనుమతి అవసరం.</string>
+    <string name="perm_screen_capture_granted">ప్రత్యేక క్షణాల కోసం స్క్రీన్ క్యాప్చర్‌కు అనుమతించబడింది.</string>
+    <string name="perm_screen_capture_denied">స్క్రీన్ క్యాప్చర్‌కు అనుమతి లభించలేదు. క్షణాలు డివైస్ ఈవెంట్‌లుగా మాత్రమే నమోదు చేయబడతాయి.</string>
+    <string name="perm_notifications_off">నోటిఫికేషన్‌లు ఆఫ్‌లో ఉన్నాయి. సెషన్ ఆపడానికి SOVARIX లోని Stop నొక్కండి.</string>
+    <string name="session_exported">సెషన్ విజయవంతంగా ఎగుమతి చేయబడింది.</string>
+    <string name="session_export_failed">ఎగుమతి చేయడం సాధ్యపడలేదు. వేరొక లొకేషన్ ఎంచుకోండి.</string>
+
+    <!-- Lab Tests & Observation Controls (Telugu) -->
+    <string name="lab_tab_experiments">ల్యాబ్ పరీక్షలు</string>
+    <string name="lab_tab_simulations">వాట్-ఇఫ్ సిమ్యులేటర్</string>
+    <string name="lab_running_test">పరీక్ష కొనసాగుతోంది</string>
+    <string name="lab_available_tests">లభ్యమయ్యే పరీక్షలు</string>
+    <string name="lab_run_test">పరీక్ష ప్రారంభించు</string>
+    <string name="lab_stop_test">పరీక్ష ఆపు</string>
+    <string name="lab_step_baseline">దశ 1/2: సాధారణ బేస్‌లైన్</string>
+    <string name="lab_step_treatment">దశ 2/2: ఫీచర్ రన్ అవుతోంది</string>
+    <string name="lab_safety_guard_active">రక్షణ వ్యవస్థ సక్రియం: ఫోన్ వేడెక్కినా లేదా బ్యాటరీ 10% కంటే తగ్గినా స్వయంచాలకంగా ఆగుతుంది.</string>
+    <string name="lab_test_history">మునుపటి పరీక్ష ఫలితాలు</string>
+    <string name="lab_no_tests_yet">ఇంతవరకు ఏ పరీక్షలూ పూర్తికాలేదు. నిజమైన బ్యాటరీ మరియు ఉష్ణ ప్రభావాలను చూడటానికి పరీక్ష ప్రారంభించండి.</string>
+    <string name="home_start_observation">నిరంతర పరిశీలన ప్రారంభించండి</string>
+    <string name="home_stop_observation">ఆపండి</string>
+    <string name="home_twin_active">ట్విన్ యాక్టివ్ · లైవ్ టెలిమెట్రీ</string>
+    <string name="home_twin_standby">ట్విన్ స్టాండ్‌బై</string>
+</resources>

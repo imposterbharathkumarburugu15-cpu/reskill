@@ -55,6 +55,19 @@ class TwinRepository(private val app: Application) {
     private val _experimentHistory = MutableStateFlow<List<Experiment>>(emptyList())
     val experimentHistory = _experimentHistory.asStateFlow()
 
+    private val _selectedLanguage = MutableStateFlow(dev.sovarix.app.localization.LocaleHelper.getPersistedLanguage(app))
+    val selectedLanguage = _selectedLanguage.asStateFlow()
+
+    val telemetry = dev.sovarix.app.telemetry.AndroidTelemetry(app)
+    private val _liveTelemetry = MutableStateFlow<Sample?>(null)
+    val liveTelemetry = _liveTelemetry.asStateFlow()
+
+    suspend fun setLanguage(code: String) = lock.withLock {
+        dev.sovarix.app.localization.LocaleHelper.persistLanguage(app, code)
+        dev.sovarix.app.localization.LocaleHelper.createLocalizedContext(app, code)
+        _selectedLanguage.value = code
+    }
+
     private var lastSave = 0L
 
     suspend fun start() = lock.withLock {
@@ -65,6 +78,7 @@ class TwinRepository(private val app: Application) {
     }
 
     suspend fun accept(sample: Sample, motion: MotionSnapshot? = null): TwinState = lock.withLock {
+        _liveTelemetry.value = sample
         engine.accept(sample, motion)
         if (!engine.state.running || sample.elapsedMs - lastSave >= 60_000) checkpoint()
         mutable.value = engine.state
@@ -80,6 +94,29 @@ class TwinRepository(private val app: Application) {
         }
         _experimentHistory.value = engine.experimentEngine.getAllExperiments()
         engine.state
+    }
+
+    suspend fun sampleNow(): Sample = lock.withLock {
+        val s = telemetry.sample(engine.state.workload)
+        _liveTelemetry.value = s
+        if (engine.state.running) {
+            val motion = gamingManager.motionManager.getLatest()
+            engine.accept(s, motion)
+            if (s.elapsedMs - lastSave >= 60_000) checkpoint()
+            mutable.value = engine.state
+            _forecastResult.value = engine.latestForecast
+            _anomalyResult.value = engine.latestAnomaly
+            _simulationResult.value = engine.latestSimulation
+            _insights.value = engine.latestInsights
+            _blackBoxEvents.value = engine.blackBox.getAll()
+            _decision.value = engine.latestDecision
+            _incidents.value = engine.incidentEngine.getAllIncidents()
+            _activeExperiment.value = engine.latestExperiment?.takeIf {
+                it.status == ExperimentStatus.RUNNING_BASELINE || it.status == ExperimentStatus.RUNNING_TREATMENT
+            }
+            _experimentHistory.value = engine.experimentEngine.getAllExperiments()
+        }
+        s
     }
 
     suspend fun stop() = lock.withLock {
@@ -108,7 +145,56 @@ class TwinRepository(private val app: Application) {
         mutable.value = engine.state
     }
 
+    suspend fun setDeviceGoal(goal: DeviceGoal) = lock.withLock {
+        engine.setDeviceGoal(goal)
+        mutable.value = engine.state
+        checkpoint()
+    }
+
+    suspend fun captureRepairBaseline() = lock.withLock {
+        val currentDna = engine.state.dna
+        val heatRate = currentDna.behaviorModel.workloadHeatingRates[Workload.GAMING] ?: 0.28
+        val coolRate = kotlin.math.abs(currentDna.behaviorModel.interventionRecoveryRateCPerMin ?: 0.22)
+        val drainRate = currentDna.behaviorModel.workloadBatteryDrainRates[Workload.GAMING] ?: 16.0
+        val baseline = RepairBaselineComparison(
+            baselineCapturedAt = System.currentTimeMillis(),
+            baselineHeatingRateCPerMin = heatRate,
+            baselineCoolingRateCPerMin = coolRate,
+            baselineBatteryDrainPctPerHour = drainRate
+        )
+        engine.setRepairBaseline(baseline)
+        mutable.value = engine.state
+        checkpoint()
+    }
+
+    suspend fun recordPostRepairObservation() = lock.withLock {
+        val existing = engine.state.dna.repairBaseline ?: return@withLock
+        val heatRate = engine.state.dna.behaviorModel.workloadHeatingRates[Workload.GAMING] ?: 0.28
+        val coolRate = kotlin.math.abs(engine.state.dna.behaviorModel.interventionRecoveryRateCPerMin ?: 0.22)
+        val drainRate = engine.state.dna.behaviorModel.workloadBatteryDrainRates[Workload.GAMING] ?: 16.0
+        val updated = existing.copy(
+            postRepairCapturedAt = System.currentTimeMillis(),
+            postRepairHeatingRateCPerMin = heatRate,
+            postRepairCoolingRateCPerMin = coolRate,
+            postRepairBatteryDrainPctPerHour = drainRate
+        )
+        engine.setRepairBaseline(updated)
+        mutable.value = engine.state
+        checkpoint()
+    }
+
     val gamingManager = dev.sovarix.app.gaming.GamingSessionManager(app, this)
+    val autoCoolManager = dev.sovarix.app.thermal.AutoCoolManager(app, this)
+    val voiceManager = dev.sovarix.app.voice.AndroidVoiceManager(app)
+
+    init {
+        autoCoolManager.start()
+        runCatching {
+            telemetry.open()
+            val initial = telemetry.sample(Workload.EVERYDAY)
+            _liveTelemetry.value = initial
+        }
+    }
 
     suspend fun event(wall: Long, kind: String, message: String) = lock.withLock {
         engine.event(wall, kind, message)

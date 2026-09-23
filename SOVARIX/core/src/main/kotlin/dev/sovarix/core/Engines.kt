@@ -125,16 +125,16 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
      * Does NOT depend on AnomalyEngine output.
      */
     fun evaluate(state: TwinState, horizonMinutes: Int = 2): ForecastResult {
-        val fList = listOf(2, 5, 15).map { forecast(state.history, it, state.dna) }
+        val fList = listOf(1, 2, 5, 15).map { forecast(state.history, it, state.dna) }
         val active = fList.firstOrNull { it.horizonMinutes == horizonMinutes } ?: fList.firstOrNull()
         val tempVal = active?.temperature?.value
         val battVal = active?.battery?.value
         val memVal = active?.memory?.value
 
-        val baselineTemp = state.temperature ?: state.latest?.batteryC
+        val baselineTemp = state.temperature ?: state.latest?.batteryC ?: 37.0
         val risk = when {
-            tempVal != null && baselineTemp != null && (tempVal - baselineTemp) >= 1.5 -> Risk.ANOMALY
-            tempVal != null && baselineTemp != null && (tempVal - baselineTemp) >= 0.5 -> Risk.WATCH
+            tempVal != null && (tempVal - baselineTemp) >= 1.5 -> Risk.ANOMALY
+            tempVal != null && (tempVal - baselineTemp) >= 0.5 -> Risk.WATCH
             active?.temperature != null -> Risk.NORMAL
             else -> Risk.UNKNOWN
         }
@@ -144,6 +144,41 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
             active?.temperature != null -> 0.70
             else -> 0.30
         }
+
+        // Multi-horizon numerical extrapolations (+10s, +30s, +60s, +5m, +15m)
+        val slopePerSec = ((state.thermalTrend?.temperatureVelocity ?: state.temperatureTrend?.slopePerMinute ?: 0.0) / 60.0).coerceIn(-0.1, 0.1)
+        val sampleCount = state.history.size
+        val spanMins = if (sampleCount > 0) sampleCount * 0.2 else 1.0
+
+        val p10 = Projection(
+            value = (baselineTemp + slopePerSec * 10.0).coerceIn(-20.0, 80.0),
+            heuristicBand = 0.2,
+            samples = sampleCount,
+            historyMinutes = spanMins,
+            clamped = false
+        )
+        val p30 = Projection(
+            value = (baselineTemp + slopePerSec * 30.0).coerceIn(-20.0, 80.0),
+            heuristicBand = 0.35,
+            samples = sampleCount,
+            historyMinutes = spanMins,
+            clamped = false
+        )
+        val p60 = Projection(
+            value = (baselineTemp + slopePerSec * 60.0).coerceIn(-20.0, 80.0),
+            heuristicBand = 0.5,
+            samples = sampleCount,
+            historyMinutes = spanMins,
+            clamped = false
+        )
+        val p5m = fList.firstOrNull { it.horizonMinutes == 5 }?.temperature
+        val p15m = fList.firstOrNull { it.horizonMinutes == 15 }?.temperature
+
+        val recoveryRatePerMin = kotlin.math.abs(state.dna.behaviorModel.interventionRecoveryRateCPerMin ?: 0.22)
+        val recoveryProj = if (state.productState == ProductState.RECOVERY || slopePerSec < -0.001) {
+            val projectedCooling = (baselineTemp - recoveryRatePerMin * 2.0).coerceAtLeast(36.0)
+            Projection(projectedCooling, 0.4, sampleCount, 2.0, false)
+        } else null
 
         return ForecastResult(
             timestamp = state.timestamp.takeIf { it > 0 } ?: (state.latest?.wallMs ?: 0L),
@@ -155,7 +190,13 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
             risk = risk,
             evidence = active?.evidence ?: "Insufficient stable history for projection.",
             forecasts = fList,
-            temperatureBiasApplied = active?.temperatureBiasApplied ?: 0.0
+            temperatureBiasApplied = active?.temperatureBiasApplied ?: 0.0,
+            forecast10s = p10,
+            forecast30s = p30,
+            forecast60s = p60,
+            forecast5m = p5m,
+            forecast15m = p15m,
+            recoveryTrajectory = recoveryProj
         )
     }
 }
@@ -411,12 +452,168 @@ object SimulationEngine {
 
     /** Dispatches a query or variable name. Rejects unmodeled variables. */
     fun simulateQuery(state: TwinState, variableOrQuery: String): SimulationOutcome {
+        val q = variableOrQuery.trim().lowercase(Locale.US)
+        val now = state.timestamp.takeIf { it > 0 } ?: (state.latest?.wallMs ?: System.currentTimeMillis())
+        val behavior = state.dna.behaviorModel
+        val currentTemp = state.temperature ?: state.latest?.batteryC ?: 37.0
+        val currentBatt = state.battery ?: 75.0
+
+        // 1. "What if I play for another hour?" / "60 minutes" / Telugu / Hindi
+        if (q.contains("hour") || q.contains("60 min") || q.contains("another 60") ||
+            q.contains("గంట") || q.contains("ఆడితే") || q.contains("ఆడినా") ||
+            q.contains("घंटे") || q.contains("खेलूं") || q.contains("एक घंटा")) {
+            val deltaTemp = behavior.gamingDurationThermalCurve[60] ?: 6.8
+            val drainPerHour = behavior.workloadBatteryDrainRates[Workload.GAMING] ?: 16.0
+            val projectedTemp = (currentTemp + deltaTemp).coerceIn(20.0, 55.0)
+            val projectedBatt = (currentBatt - drainPerHour).coerceIn(0.0, 100.0)
+
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT PATH: Stop Session Now",
+                assumedTrendMultiplier = 0.0,
+                predictedTemperatureC = currentTemp,
+                predictedBatteryPct = currentBatt,
+                thermalRisk = if (currentTemp >= 40.0) Risk.WATCH else Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Session ends now. Temperature stabilizes and begins cooling toward baseline."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: Game for Another 60 Min",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = projectedTemp,
+                predictedBatteryPct = projectedBatt,
+                thermalRisk = if (projectedTemp >= 42.0) Risk.ANOMALY else Risk.WATCH,
+                performanceRisk = if (projectedTemp >= 42.0) Risk.ANOMALY else Risk.WATCH,
+                explanation = "Sustained 60 min gaming adds ~+${String.format(Locale.US, "%.1f", deltaTemp)}°C based on your device's empirical gaming thermal curve."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = currentPath,
+                isSupported = true,
+                explanation = "COUNTERFACTUAL SIMULATION: Comparing current path vs 60 minutes additional gaming based on Device DNA."
+            )
+        }
+
+        // 2. "What if I record while gaming?" / "screen recording" / Telugu / Hindi
+        if (q.contains("record") || q.contains("screen capture") ||
+            q.contains("రికార్డ్") || q.contains("రికార్డింగ్") ||
+            q.contains("रिकॉर्ड") || q.contains("रिकॉर्डिंग")) {
+            val deltaHeatingRate = behavior.recordingThermalDeltaCPerMin ?: 0.18
+            val projectedTemp = (currentTemp + deltaHeatingRate * 15.0).coerceIn(20.0, 55.0)
+            val projectedBatt = (currentBatt - 4.5).coerceIn(0.0, 100.0)
+
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT PATH: Gaming without Recording",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = (currentTemp + 1.2).coerceIn(20.0, 55.0),
+                predictedBatteryPct = (currentBatt - 3.5).coerceIn(0.0, 100.0),
+                thermalRisk = Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Standard gaming workload without screen capture pipeline overhead."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: Gaming with Active Screen Recording",
+                assumedTrendMultiplier = 1.5,
+                predictedTemperatureC = projectedTemp,
+                predictedBatteryPct = projectedBatt,
+                thermalRisk = if (projectedTemp >= 41.0) Risk.WATCH else Risk.NORMAL,
+                performanceRisk = if (projectedTemp >= 41.0) Risk.WATCH else Risk.NORMAL,
+                explanation = "MediaProjection capture buffer adds ~+${String.format(Locale.US, "%.2f", deltaHeatingRate)}°C/min thermal load."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = currentPath,
+                isSupported = true,
+                explanation = "COUNTERFACTUAL SIMULATION: Gaming with vs without screen recording."
+            )
+        }
+
+        // 3. "What if I charge while gaming?" / "charging" / Telugu / Hindi
+        if (q.contains("charge") || q.contains("charging") ||
+            q.contains("ఛార్జ్") || q.contains("ఛార్జింగ్") ||
+            q.contains("चार्ज") || q.contains("चार्जिंग")) {
+            val mult = behavior.chargingGamingThermalMultiplier ?: 1.35
+            val currentGamingRate = behavior.workloadHeatingRates[Workload.GAMING] ?: 0.28
+            val chargingRate = currentGamingRate * mult
+            val projectedTemp = (currentTemp + chargingRate * 15.0).coerceIn(20.0, 55.0)
+
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT PATH: Gaming on Battery",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = (currentTemp + currentGamingRate * 15.0).coerceIn(20.0, 55.0),
+                predictedBatteryPct = (currentBatt - 4.0).coerceIn(0.0, 100.0),
+                thermalRisk = Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Discharging battery under gaming load."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: Gaming while Charging",
+                assumedTrendMultiplier = mult,
+                predictedTemperatureC = projectedTemp,
+                predictedBatteryPct = (currentBatt + 8.0).coerceIn(0.0, 100.0),
+                thermalRisk = if (projectedTemp >= 42.0) Risk.ANOMALY else Risk.WATCH,
+                performanceRisk = if (projectedTemp >= 42.0) Risk.ANOMALY else Risk.WATCH,
+                explanation = "Battery fast-charging adds joule heating, accelerating thermal rise by ~+${((mult - 1.0) * 100).toInt()}%."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = currentPath,
+                isSupported = true,
+                explanation = "COUNTERFACTUAL SIMULATION: Gaming on battery vs gaming while charging."
+            )
+        }
+
+        // 4. "What if I reduce the workload?" / "reduce" / Telugu / Hindi
+        if (q.contains("reduce") || q.contains("lower") || q.contains("cool") || q.contains("mitigat") ||
+            q.contains("stop") || q.contains("తగ్గించ") || q.contains("తగ్గిస్తే") || q.contains("ఆపితే") ||
+            q.contains("कम") || q.contains("घटा") || q.contains("बंद")) {
+            val coolingRate = kotlin.math.abs(behavior.interventionRecoveryRateCPerMin ?: 0.22)
+            val projectedTemp = (currentTemp - coolingRate * 10.0).coerceAtLeast(36.0)
+
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT PATH: Sustained Heavy Workload",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = currentTemp + 1.5,
+                predictedBatteryPct = currentBatt - 3.0,
+                thermalRisk = if (currentTemp >= 40.0) Risk.WATCH else Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Maintains current unconstrained processing load."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: Workload Reduction / Auto-Cool Active",
+                assumedTrendMultiplier = 0.3,
+                predictedTemperatureC = projectedTemp,
+                predictedBatteryPct = currentBatt - 1.0,
+                thermalRisk = Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Throttling background sampling and pausing non-essential intelligence restores cooling at ~${String.format(Locale.US, "%.2f", coolingRate)}°C/min."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = alternativePath,
+                isSupported = true,
+                explanation = "COUNTERFACTUAL SIMULATION: Sustained workload vs workload reduction."
+            )
+        }
+
+        // 5. Check unsupported or standard levers via LocalAIIntent
         val intent = LocalAIEngine.parseIntent(variableOrQuery)
         return when (intent.type) {
             LocalAIIntentType.UNSUPPORTED_SIMULATION -> SimulationUnsupported(
                 variable = intent.unsupportedVariable ?: variableOrQuery,
                 reason = "Variable '$variableOrQuery' cannot be controlled or reliably modeled via public Android APIs. SOVARIX does not fabricate unmodeled system simulations.",
-                timestamp = state.timestamp.takeIf { it > 0 } ?: System.currentTimeMillis()
+                timestamp = now
             )
             LocalAIIntentType.SIMULATE -> {
                 val req = intent.simulationRequest ?: SimulationRequest(ControllableLever.FPS_CAP, "60")
@@ -1212,6 +1409,8 @@ enum class LocalAIIntentType {
     EXPLAIN_ANOMALY,
     SUMMARIZE_BLACKBOX,
     EXPLAIN_OVERHEAD,
+    EXPLAIN_DNA,
+    EXPLAIN_AUTOPILOT,
     UNSUPPORTED_SIMULATION,
     GENERAL_QUERY
 }
@@ -1312,15 +1511,25 @@ object LocalAIEngine {
                 )
             }
 
-            // Explanations
-            q.contains("anomaly") || q.contains("hot") || q.contains("heat") || q.contains("thermal") || q.contains("spike") ->
+            // Explanations & Diagnostics (English, Telugu, Hindi)
+            q.contains("anomaly") || q.contains("hot") || q.contains("heat") || q.contains("thermal") || q.contains("spike") ||
+                q.contains("వేడెక్కుతోంది") || q.contains("వేడి") || q.contains("గర్మ") || q.contains("गर्म") || q.contains("तापमान") ->
                 LocalAIIntent(LocalAIIntentType.EXPLAIN_ANOMALY, rawQuery = query)
-            q.contains("future") || q.contains("forecast") || q.contains("predict") || q.contains("next") ->
+            q.contains("future") || q.contains("forecast") || q.contains("predict") || q.contains("next") ||
+                q.contains("భవిష్యత్తు") || q.contains("అంచనా") || q.contains("भविष्य") || q.contains("पूर्वानुमान") ->
                 LocalAIIntent(LocalAIIntentType.EXPLAIN_FORECAST, rawQuery = query)
-            q.contains("black box") || q.contains("history") || q.contains("log") || q.contains("evidence") || q.contains("what happened") ->
+            q.contains("black box") || q.contains("history") || q.contains("log") || q.contains("evidence") || q.contains("what happened") ||
+                q.contains("మెమొరీ") || q.contains("చరిత్ర") || q.contains("इतिहास") || q.contains("मेमोरी") ->
                 LocalAIIntent(LocalAIIntentType.SUMMARIZE_BLACKBOX, rawQuery = query)
-            q.contains("overhead") || q.contains("cost") || q.contains("battery drain") || q.contains("footprint") ->
+            q.contains("overhead") || q.contains("cost") || q.contains("battery drain") || q.contains("footprint") ||
+                q.contains("ఖర్చు") || q.contains("వినియోగం") || q.contains("खपत") || q.contains("लागत") ->
                 LocalAIIntent(LocalAIIntentType.EXPLAIN_OVERHEAD, rawQuery = query)
+            q.contains("dna") || q.contains("behavior") || q.contains("insight") || q.contains("pattern") ||
+                q.contains("ప్రవర్తన") || q.contains("పోకడ") || q.contains("व्यवहार") || q.contains("पैटर्न") ->
+                LocalAIIntent(LocalAIIntentType.EXPLAIN_DNA, rawQuery = query)
+            q.contains("autopilot") || q.contains("goal") || q.contains("policy") ||
+                q.contains("లక్ష్యం") || q.contains("లక్ష్యాలు") || q.contains("लक्ष्य") || q.contains("ऑटोपायलट") ->
+                LocalAIIntent(LocalAIIntentType.EXPLAIN_AUTOPILOT, rawQuery = query)
             else ->
                 LocalAIIntent(LocalAIIntentType.EXPLAIN_TWIN, rawQuery = query)
         }
@@ -1366,10 +1575,40 @@ object LocalAIEngine {
             LocalAIIntentType.EXPLAIN_OVERHEAD -> {
                 explainOverhead(state.overhead)
             }
+            LocalAIIntentType.EXPLAIN_DNA -> {
+                explainDeviceDNA(state.dna)
+            }
+            LocalAIIntentType.EXPLAIN_AUTOPILOT -> {
+                explainAutopilot(state)
+            }
             LocalAIIntentType.EXPLAIN_TWIN, LocalAIIntentType.GENERAL_QUERY -> {
                 explainTwinState(state, forecast, anomaly)
             }
         }
+    }
+
+    fun explainDeviceDNA(dna: DeviceDNA): String {
+        val insights = dna.behaviorModel.generateInsights()
+        val scores = dna.behaviorModel.computeDNAScores()
+        return "Local AI · Device DNA 2.0\n\n" +
+            "Maturity: ${dna.maturity} (${dna.sessions} sessions, ${dna.behaviorModel.totalObservations} observations)\n\n" +
+            "Behavioral Ratings:\n" +
+            "• Thermal Response: ${(scores.thermalResponse * 100).toInt()}%\n" +
+            "• Gaming Endurance: ${(scores.gamingEndurance * 100).toInt()}%\n" +
+            "• Recovery Behavior: ${(scores.recoveryBehavior * 100).toInt()}%\n" +
+            "• Battery Response: ${(scores.batteryResponse * 100).toInt()}%\n\n" +
+            "Evidence-Backed Insights:\n" +
+            insights.joinToString("\n") { "• $it" }
+    }
+
+    fun explainAutopilot(state: TwinState): String {
+        return "Local AI · Phone Autopilot\n\n" +
+            "Active Device Goal: ${state.deviceGoal.title}\n" +
+            "Current State: ${state.productState.label}\n\n" +
+            "Rationale:\n" +
+            (state.autopilotDecision?.rationale ?: "Observing device telemetry within goal constraints.") + "\n\n" +
+            "Permitted Actions Active:\n" +
+            (state.autopilotDecision?.permittedActions?.joinToString("\n") { "• ${it.actionName}: ${it.description}" } ?: "• Nominal observation")
     }
 
     fun explainSimulation(outcome: SimulationOutcome): String = when (outcome) {

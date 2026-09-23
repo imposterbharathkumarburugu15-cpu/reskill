@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <application android:name=".SovarixApp" android:allowBackup="false"
         android:label="SOVARIX" android:icon="@drawable/ic_sovarix"
@@ -24,5 +25,6 @@
         <service android:name=".gaming.GamingCaptureService" android:exported="false"
             android:stopWithTask="false" android:foregroundServiceType="mediaProjection">
         </service>
+        <service android:name=".overlay.ThermalOverlayService" android:exported="false" />
     </application>
 </manifest>

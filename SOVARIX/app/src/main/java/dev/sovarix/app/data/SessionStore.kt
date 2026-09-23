@@ -23,8 +23,71 @@ class SessionStore(context: Context) {
             val biases = mutableMapOf<Int, Double>()
             val bias = d.getJSONObject("biases")
             bias.keys().forEach { key -> biases[key.toInt()] = bias.getDouble(key) }
-            val dna = DeviceDNA(d.getInt("sessions"), d.getInt("observations"), baselines, biases,
-                d.getInt("verifiedCount"), d.getDouble("totalAbsoluteErrorC"))
+
+            var behavior = DeviceBehaviorModel()
+            if (d.has("behavior")) {
+                val bObj = d.getJSONObject("behavior")
+                val heatMap = mutableMapOf<Workload, Double>()
+                if (bObj.has("heatingRates")) {
+                    val hObj = bObj.getJSONObject("heatingRates")
+                    hObj.keys().forEach { wKey ->
+                        try { heatMap[Workload.valueOf(wKey)] = hObj.getDouble(wKey) } catch (_: Exception) {}
+                    }
+                }
+                val battMap = mutableMapOf<Workload, Double>()
+                if (bObj.has("batteryRates")) {
+                    val battObj = bObj.getJSONObject("batteryRates")
+                    battObj.keys().forEach { wKey ->
+                        try { battMap[Workload.valueOf(wKey)] = battObj.getDouble(wKey) } catch (_: Exception) {}
+                    }
+                }
+                val curveMap = mutableMapOf<Int, Double>()
+                if (bObj.has("durationCurve")) {
+                    val cObj = bObj.getJSONObject("durationCurve")
+                    cObj.keys().forEach { mKey ->
+                        cObj.optDouble(mKey).takeIf { it.isFinite() }?.let { curveMap[mKey.toInt()] = it }
+                    }
+                }
+                behavior = DeviceBehaviorModel(
+                    workloadHeatingRates = if (heatMap.isNotEmpty()) heatMap else behavior.workloadHeatingRates,
+                    workloadBatteryDrainRates = if (battMap.isNotEmpty()) battMap else behavior.workloadBatteryDrainRates,
+                    gamingDurationThermalCurve = if (curveMap.isNotEmpty()) curveMap else behavior.gamingDurationThermalCurve,
+                    recordingThermalDeltaCPerMin = bObj.optDouble("recordingDelta").takeIf { it.isFinite() },
+                    chargingGamingThermalMultiplier = bObj.optDouble("chargingMultiplier").takeIf { it.isFinite() },
+                    interventionRecoveryRateCPerMin = bObj.optDouble("recoveryRate").takeIf { it.isFinite() },
+                    totalObservations = bObj.optInt("totalObservations", 0),
+                    gamingSessionsCount = bObj.optInt("gamingSessionsCount", 0),
+                    recordingSessionsCount = bObj.optInt("recordingSessionsCount", 0),
+                    chargingGamingSessionsCount = bObj.optInt("chargingGamingSessionsCount", 0),
+                    interventionCount = bObj.optInt("interventionCount", 0),
+                    lastUpdatedWallMs = bObj.optLong("lastUpdatedWallMs", 0L)
+                )
+            }
+            var repairComparison: RepairBaselineComparison? = null
+            if (d.has("repairBaseline")) {
+                val rObj = d.getJSONObject("repairBaseline")
+                repairComparison = RepairBaselineComparison(
+                    baselineCapturedAt = rObj.optLong("baselineCapturedAt"),
+                    baselineHeatingRateCPerMin = rObj.optDouble("baselineHeatingRate", 0.0),
+                    baselineCoolingRateCPerMin = rObj.optDouble("baselineCoolingRate", 0.0),
+                    baselineBatteryDrainPctPerHour = rObj.optDouble("baselineBatteryDrain", 0.0),
+                    postRepairCapturedAt = rObj.optLong("postRepairCapturedAt").takeIf { it > 0 },
+                    postRepairHeatingRateCPerMin = rObj.optDouble("postRepairHeatingRate").takeIf { it.isFinite() },
+                    postRepairCoolingRateCPerMin = rObj.optDouble("postRepairCoolingRate").takeIf { it.isFinite() },
+                    postRepairBatteryDrainPctPerHour = rObj.optDouble("postRepairBatteryDrain").takeIf { it.isFinite() }
+                )
+            }
+
+            val dna = DeviceDNA(
+                sessions = d.getInt("sessions"),
+                observations = d.getInt("observations"),
+                baselineByContext = baselines,
+                temperatureBiasByHorizon = biases,
+                verifiedCount = d.getInt("verifiedCount"),
+                totalAbsoluteErrorC = d.getDouble("totalAbsoluteErrorC"),
+                behaviorModel = behavior,
+                repairBaseline = repairComparison
+            )
             val events = root.getJSONArray("events").objects().takeLast(200).map { Event(it.getLong("id"), it.getLong("wallMs"), it.getString("kind"), it.getString("message")) }.toMutableList()
             if (root.optBoolean("sessionWasRunning")) events += Event((events.maxOfOrNull { it.id } ?: 0) + 1,
                 System.currentTimeMillis(), "INTERRUPTED", "Previous session ended without a final checkpoint. Pending comparisons were discarded; no outcome was invented.")
@@ -49,11 +112,52 @@ class SessionStore(context: Context) {
             val baselines = JSONObject(); s.dna.baselineByContext.forEach { (k, b) -> baselines.put(k,
                 JSONObject().put("count", b.count).put("meanC", b.meanC).put("m2", b.m2)) }
             val biases = JSONObject(); s.dna.temperatureBiasByHorizon.forEach { (k, v) -> biases.put(k.toString(), v) }
-            val root = JSONObject().put("schemaVersion", 1).put("product", "SOVARIX").put("sessionWasRunning", s.running)
-                .put("exportedAt", System.currentTimeMillis()).put("source", "Android public APIs; no generated samples")
-                .put("limitations", "Battery temperature is not CPU temperature. Forecasts are extrapolations; scenario multipliers are assumptions. No Q-chip control or bundled LLM. CPU cost is process CPU percent of one core; battery impact is not attributable.")
-                .put("dna", JSONObject().put("sessions", s.dna.sessions).put("observations", s.dna.observations)
-                    .put("baselines", baselines).put("biases", biases).put("verifiedCount", s.dna.verifiedCount).put("totalAbsoluteErrorC", s.dna.totalAbsoluteErrorC))
+                val behaviorObj = JSONObject().apply {
+                    val hObj = JSONObject()
+                    s.dna.behaviorModel.workloadHeatingRates.forEach { (w, r) -> hObj.put(w.name, r) }
+                    put("heatingRates", hObj)
+
+                    val battObj = JSONObject()
+                    s.dna.behaviorModel.workloadBatteryDrainRates.forEach { (w, r) -> battObj.put(w.name, r) }
+                    put("batteryRates", battObj)
+
+                    val cObj = JSONObject()
+                    s.dna.behaviorModel.gamingDurationThermalCurve.forEach { (m, d) -> cObj.put(m.toString(), d) }
+                    put("durationCurve", cObj)
+
+                    putNullable("recordingDelta", s.dna.behaviorModel.recordingThermalDeltaCPerMin)
+                    putNullable("chargingMultiplier", s.dna.behaviorModel.chargingGamingThermalMultiplier)
+                    putNullable("recoveryRate", s.dna.behaviorModel.interventionRecoveryRateCPerMin)
+                    put("totalObservations", s.dna.behaviorModel.totalObservations)
+                    put("gamingSessionsCount", s.dna.behaviorModel.gamingSessionsCount)
+                    put("recordingSessionsCount", s.dna.behaviorModel.recordingSessionsCount)
+                    put("chargingGamingSessionsCount", s.dna.behaviorModel.chargingGamingSessionsCount)
+                    put("interventionCount", s.dna.behaviorModel.interventionCount)
+                    put("lastUpdatedWallMs", s.dna.behaviorModel.lastUpdatedWallMs)
+                }
+
+                val dnaObj = JSONObject().put("sessions", s.dna.sessions).put("observations", s.dna.observations)
+                    .put("baselines", baselines).put("biases", biases).put("verifiedCount", s.dna.verifiedCount)
+                    .put("totalAbsoluteErrorC", s.dna.totalAbsoluteErrorC)
+                    .put("behavior", behaviorObj)
+
+                s.dna.repairBaseline?.let { rb ->
+                    val rbObj = JSONObject()
+                        .put("baselineCapturedAt", rb.baselineCapturedAt)
+                        .put("baselineHeatingRate", rb.baselineHeatingRateCPerMin)
+                        .put("baselineCoolingRate", rb.baselineCoolingRateCPerMin)
+                        .put("baselineBatteryDrain", rb.baselineBatteryDrainPctPerHour)
+                    rb.postRepairCapturedAt?.let { rbObj.put("postRepairCapturedAt", it) }
+                    rb.postRepairHeatingRateCPerMin?.let { rbObj.put("postRepairHeatingRate", it) }
+                    rb.postRepairCoolingRateCPerMin?.let { rbObj.put("postRepairCoolingRate", it) }
+                    rb.postRepairBatteryDrainPctPerHour?.let { rbObj.put("postRepairBatteryDrain", it) }
+                    dnaObj.put("repairBaseline", rbObj)
+                }
+
+                val root = JSONObject().put("schemaVersion", 1).put("product", "SOVARIX").put("sessionWasRunning", s.running)
+                    .put("exportedAt", System.currentTimeMillis()).put("source", "Android public APIs; no generated samples")
+                    .put("limitations", "Battery temperature is not CPU temperature. Forecasts are extrapolations; scenario multipliers are assumptions. No Q-chip control or bundled LLM. CPU cost is process CPU percent of one core; battery impact is not attributable.")
+                    .put("dna", dnaObj)
                 .put("events", JSONArray(s.events.map { JSONObject().put("id", it.id).put("wallMs", it.wallMs).put("kind", it.kind).put("message", it.message) }))
                 .put("verifications", JSONArray(s.verifications.map { v -> JSONObject().put("id", v.id).put("wallMs", v.wallMs)
                     .put("horizonMinutes", v.horizonMinutes).putNullable("predictedC", v.predictedC).putNullable("actualC", v.actualC)

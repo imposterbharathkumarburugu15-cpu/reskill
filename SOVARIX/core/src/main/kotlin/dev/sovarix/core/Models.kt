@@ -88,7 +88,10 @@ data class DeviceDNA(val sessions: Int = 0, val observations: Int = 0,
     val verifiedCount: Int = 0, val totalAbsoluteErrorC: Double = 0.0,
     val causalRelationships: List<CausalRelationship> = emptyList(),
     val experimentCount: Int = 0,
-    val behavioralFingerprint: Map<String, Baseline> = emptyMap()
+    val behavioralFingerprint: Map<String, Baseline> = emptyMap(),
+    val thermalDNA: ThermalDNAProfile = ThermalDNAProfile(),
+    val behaviorModel: DeviceBehaviorModel = DeviceBehaviorModel(),
+    val repairBaseline: RepairBaselineComparison? = null
 ) {
     val meanAbsoluteErrorC get() = if (verifiedCount > 0) totalAbsoluteErrorC / verifiedCount else null
     val maturity: String get() = when {
@@ -136,6 +139,9 @@ data class TwinState(
     val performanceState: String = "NOMINAL",
     val anomalyIndicators: List<String> = emptyList(),
     val confidence: Double = 1.0,
+    val productState: ProductState = ProductState.AWARE,
+    val deviceGoal: DeviceGoal = DeviceGoal.KEEP_PHONE_COOL,
+    val autopilotDecision: AutopilotDecision? = null,
 
     // 2. Operational context & history snapshots
     val latest: Sample? = null,
@@ -150,6 +156,11 @@ data class TwinState(
     val events: List<Event> = emptyList(),
     val dna: DeviceDNA = DeviceDNA(),
     val overhead: Overhead? = null,
+    val thermalTrend: ThermalTrend? = null,
+    val thermalForecast: ThermalForecastResult? = null,
+    val autoCoolDecision: AutoCoolDecision? = null,
+    val autoCoolVerification: AutoCoolVerification? = null,
+    val autoCoolSettings: AutoCoolSettings = AutoCoolSettings(),
     val running: Boolean = false,
     val error: String? = null
 )
@@ -169,7 +180,13 @@ data class ForecastResult(
     val risk: Risk = Risk.UNKNOWN,
     val evidence: String = "",
     val forecasts: List<Forecast> = emptyList(),
-    val temperatureBiasApplied: Double = 0.0
+    val temperatureBiasApplied: Double = 0.0,
+    val forecast10s: Projection? = null,
+    val forecast30s: Projection? = null,
+    val forecast60s: Projection? = null,
+    val forecast5m: Projection? = null,
+    val forecast15m: Projection? = null,
+    val recoveryTrajectory: Projection? = null
 )
 
 /**
@@ -230,6 +247,8 @@ data class SimulationUnsupported(
     override val timestamp: Long = 0L,
     override val isSupported: Boolean = false
 ) : SimulationOutcome
+
+typealias SimulationUnavailable = SimulationUnsupported
 
 enum class ControllableLever(val label: String, val unit: String, val supportedValues: List<String>) {
     FPS_CAP("FPS Cap", "FPS", listOf("60", "90", "120")),

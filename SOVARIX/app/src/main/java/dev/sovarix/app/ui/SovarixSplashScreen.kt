@@ -101,45 +101,49 @@ fun SovarixSplashScreen(
         launch {
             logoScale.animateTo(
                 targetValue = 1.0f,
-                animationSpec = tween(durationMillis = 700, easing = FastOutSlowInEasing)
+                animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
             )
         }
         launch {
             logoAlpha.animateTo(
                 targetValue = 1.0f,
-                animationSpec = tween(durationMillis = 500)
+                animationSpec = tween(durationMillis = 450)
             )
         }
         launch {
             glowAlpha.animateTo(
-                targetValue = 0.9f,
-                animationSpec = tween(durationMillis = 600, easing = LinearOutSlowInEasing)
+                targetValue = 0.95f,
+                animationSpec = tween(durationMillis = 550, easing = LinearOutSlowInEasing)
             )
         }
 
-        delay(350)
-        // Phase 2: Brand Text Reveal
+        delay(300)
+        // Phase 2: Brand Text & Tagline Reveal
         launch {
             textAlpha.animateTo(
                 targetValue = 1.0f,
-                animationSpec = tween(durationMillis = 500)
+                animationSpec = tween(durationMillis = 450)
             )
         }
 
-        // Phase 3: Telemetry Diagnostics Boot Run
-        delay(200)
-        bootStepText = "INITIALIZING SENSORS..."
-        bootProgress.animateTo(0.35f, tween(350, easing = FastOutSlowInEasing))
+        // Phase 3: Hardware Awareness & Neural Twin Diagnostics Boot Sequence
+        delay(150)
+        bootStepText = "DETECTING PHYSICAL HARDWARE..."
+        bootProgress.animateTo(0.25f, tween(300, easing = FastOutSlowInEasing))
 
         delay(150)
-        bootStepText = "CALIBRATING NEURAL TWIN..."
-        bootProgress.animateTo(0.70f, tween(350, easing = FastOutSlowInEasing))
+        bootStepText = "SYNCHRONIZING DIGITAL TWIN..."
+        bootProgress.animateTo(0.55f, tween(320, easing = FastOutSlowInEasing))
 
         delay(150)
-        bootStepText = "SOVARIX SYSTEM READY"
-        bootProgress.animateTo(1.0f, tween(300, easing = FastOutSlowInEasing))
+        bootStepText = "INITIALIZING MULTILINGUAL INTELLIGENCE..."
+        bootProgress.animateTo(0.85f, tween(320, easing = FastOutSlowInEasing))
 
-        delay(400)
+        delay(150)
+        bootStepText = "DEVICE TWIN ONLINE · SYSTEM READY"
+        bootProgress.animateTo(1.0f, tween(250, easing = FastOutSlowInEasing))
+
+        delay(350)
         // Phase 4: Smooth dismiss
         isExiting = true
         delay(250)
@@ -292,12 +296,12 @@ fun SovarixSplashScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "NEURAL TWIN & GAMING ENGINE",
+                        text = "YOUR PHONE KNOWS. NOW IT UNDERSTANDS.",
                         color = SplashCyan,
-                        fontSize = 11.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         fontFamily = FontFamily.Monospace,
-                        letterSpacing = 2.sp
+                        letterSpacing = 1.sp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Box(
@@ -363,19 +367,30 @@ fun SovarixSplashScreen(
             }
         }
 
-        // Bottom skip hint
-        Box(
+        // Bottom attribution & skip hint
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 36.dp)
-                .alpha(textAlpha.value * 0.6f)
+                .padding(bottom = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            Text(
+                text = "MADE BY DOOMSQUAD & TEAM",
+                color = SplashGreen,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                letterSpacing = 2.sp,
+                modifier = Modifier.alpha(textAlpha.value * 0.9f)
+            )
             Text(
                 text = "TAP TO SKIP",
                 color = SplashTextMuted,
-                fontSize = 10.sp,
+                fontSize = 9.sp,
                 fontFamily = FontFamily.Monospace,
-                letterSpacing = 1.5.sp
+                letterSpacing = 1.5.sp,
+                modifier = Modifier.alpha(textAlpha.value * 0.6f)
             )
         }
     }

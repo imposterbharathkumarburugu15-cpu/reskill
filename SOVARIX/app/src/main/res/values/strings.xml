@@ -1,0 +1,173 @@
+<resources>
+    <!-- Brand & Identity -->
+    <string name="app_name">SOVARIX</string>
+    <string name="app_tagline">Your phone knows. Now it understands.</string>
+    <string name="brand_product">SOVARIX</string>
+    <string name="brand_thermal_shield">Thermal Shield</string>
+    <string name="brand_auto_cool">Auto-Cool</string>
+    <string name="brand_device_dna">Device DNA 2.0</string>
+    <string name="brand_phone_lab">Phone Lab</string>
+
+    <!-- Navigation Tabs -->
+    <string name="tab_home">HOME</string>
+    <string name="tab_lab">LAB</string>
+    <string name="tab_game">GAME</string>
+    <string name="tab_memory">MEMORY</string>
+    <string name="tab_device">DEVICE</string>
+
+    <!-- Product States & Hero Verdicts -->
+    <string name="state_aware">AWARE</string>
+    <string name="state_alert">ALERT</string>
+    <string name="state_protect">PROTECT</string>
+    <string name="state_recovery">RECOVERY</string>
+    <string name="status_cool_stable">COOL / STABLE</string>
+    <string name="status_nominal">NOMINAL</string>
+    <string name="status_active">SYSTEM ACTIVE</string>
+    <string name="verdict_healthy">PHONE IS HEALTHY</string>
+    <string name="verdict_rising">THERMAL LOAD RISING</string>
+    <string name="verdict_shield">PROTECTION ACTIVE</string>
+    <string name="verdict_cooling">RECOVERING TOWARD BASELINE</string>
+
+    <!-- Contextual Status Ribbon -->
+    <string name="hero_tagline">YOUR PHONE KNOWS. NOW IT UNDERSTANDS.</string>
+    <string name="status_monitoring">SYSTEM ACTIVE</string>
+    <string name="label_battery">%1$d%% Battery</string>
+    <string name="label_ram_free">%1$s GB RAM</string>
+    <string name="label_thermal_light">Thermal Light</string>
+    <string name="label_thermal_warm">Thermal Warm</string>
+    <string name="label_performance_stable">Performance Stable</string>
+    <string name="label_performance_throttled">Throttled</string>
+    <string name="label_current_activity">CURRENT ACTIVITY</string>
+    <string name="label_no_game_active">DEVICE STANDBY</string>
+    <string name="label_sovarix_insight">SOVARIX INSIGHT</string>
+    <string name="insight_cooler_than_avg">Your device has remained cooler than your recent average.</string>
+    <string name="device_dna_subtitle">Empirical physical model generated from %1$d observed sessions</string>
+    <string name="device_dna_learned_behavior">LEARNED DEVICE BEHAVIOR</string>
+    <string name="device_dna_empty_learning">Your device has remained cooler than recent average.</string>
+    <string name="game_subtitle_active">Active Gaming Session · Low-latency monitoring</string>
+    <string name="game_subtitle_standby">Autonomous Game Copilot · Standby</string>
+    <string name="lab_what_if_hero">WHAT HAPPENS IF...</string>
+
+    <!-- Thermal Notifications (Exact Prompt Copy) -->
+    <string name="thermal_alert_title">SOVARIX · Thermal Alert</string>
+    <string name="thermal_alert_body">Your phone is heating during gaming.</string>
+    <string name="thermal_warning_title">SOVARIX · Thermal Warning</string>
+    <string name="thermal_warning_body">Your phone is getting hot. Gaming performance may decrease.</string>
+    <string name="thermal_autocool_title">SOVARIX · Auto-Cool</string>
+    <string name="thermal_autocool_body">Thermal load is rising. Auto-Cool is monitoring recovery.</string>
+    <string name="thermal_stable_title">SOVARIX · Thermal Stable</string>
+    <string name="thermal_stable_body">Your phone is cooling back toward normal.</string>
+    <string name="critical_thermal_title">SOVARIX · Critical Thermal State</string>
+    <string name="critical_thermal_body">Device temperature is critical. Stop gaming and allow the device to cool.</string>
+
+    <!-- Legacy / Multilingual Fallbacks -->
+    <string name="thermal_shield_title">SOVARIX · Thermal Warning</string>
+    <string name="thermal_shield_body">Your phone is getting hot. Gaming performance may decrease.</string>
+    <string name="thermal_recovery_title">SOVARIX · Thermal Stable</string>
+    <string name="thermal_recovery_body">Your phone is cooling back toward normal.</string>
+
+    <!-- Lab / Experiment Engine -->
+    <string name="lab_title">PHONE EXPERIMENT ENGINE</string>
+    <string name="lab_subtitle">Counterfactual scenario modeling on your phone\'s persistent behavioral twin.</string>
+    <string name="lab_what_if">WHAT HAPPENS IF...</string>
+    <string name="lab_empirical_twin">EMPIRICAL TWIN</string>
+    <string name="lab_current_path">CURRENT PATH</string>
+    <string name="lab_alternative_path">ALTERNATIVE PATH</string>
+    <string name="lab_path_comparison">COUNTERFACTUAL PATH COMPARISON</string>
+    <string name="lab_no_hardware_change">NO PHONE MODIFICATION</string>
+    <string name="lab_thermal_delta">PREDICTED THERMAL DELTA</string>
+    <string name="lab_battery_delta">PREDICTED BATTERY DELTA</string>
+    <string name="lab_unsupported_title">SIMULATION UNAVAILABLE FOR THIS VARIABLE</string>
+    <string name="lab_unsupported_body">Never invent results. SOVARIX only models empirical hardware signals.</string>
+    <string name="lab_test_levers">TEST SYSTEM LEVERS</string>
+    <string name="lab_levers_disclaimer">Real phone hardware remains unchanged. All simulations run counterfactually against your phone\'s learned behavioral model.</string>
+    <string name="query_game_hour">What happens if I game for another hour?</string>
+    <string name="query_record_game">What happens if I record while gaming?</string>
+    <string name="query_charge_game">What happens if I charge while gaming?</string>
+    <string name="query_reduce_workload">What happens if I reduce the workload?</string>
+    <string name="query_stop_capture">What happens if I stop screen capture?</string>
+    <string name="query_thermal_continues">What happens if thermal load continues?</string>
+
+    <!-- Game Screen -->
+    <string name="game_title">GAME INTELLIGENCE</string>
+    <string name="game_active_subtitle">Active Gaming Session · Low-latency monitoring</string>
+    <string name="game_standby_subtitle">Autonomous Game Copilot · Standby</string>
+    <string name="game_special_moments">SPECIAL MOMENTS</string>
+    <string name="game_special_moments_subtitle">Clips captured automatically from physical gaming telemetry</string>
+    <string name="game_no_moments">No special moments captured yet in this session.</string>
+    <string name="game_live_capture_active">LIVE SCREEN CAPTURE ACTIVE</string>
+    <string name="game_capture_unavailable">SCREEN CAPTURE STANDBY (TAP TO AUTHORIZE)</string>
+    <string name="game_session_ended">Gaming session ended</string>
+
+    <!-- Memory Screen -->
+    <string name="memory_title">MEMORY</string>
+    <string name="memory_subtitle">Everything your phone has experienced.</string>
+    <string name="memory_tab_timeline">Timeline</string>
+    <string name="memory_tab_technical">Technical View</string>
+    <string name="memory_recent_experiences">RECENT EXPERIENCES</string>
+    <string name="memory_empty">No events recorded yet. Gaming sessions, thermal trends, and recovery milestones will populate this memory stream.</string>
+    <string name="memory_sha256_title">SHA-256 HASH CHAIN</string>
+    <string name="memory_sha256_verified">Tamper-Evident Integrity: Verified</string>
+    <string name="memory_sha256_warning">Integrity Warning</string>
+    <string name="memory_secure">SECURE</string>
+    <string name="memory_corrupted">CORRUPTED</string>
+
+    <!-- Device Screen & Settings -->
+    <string name="device_title">DEVICE INTELLIGENCE</string>
+    <string name="device_subtitle">Device DNA 2.0, Autopilot goals, hardware profile, and forensics.</string>
+    <string name="device_language_title">LANGUAGE / భాష / भाषा</string>
+    <string name="device_language_subtitle">Choose your preferred language. Updates immediately without restart.</string>
+    <string name="device_autopilot_goal">AUTOPILOT GOAL</string>
+    <string name="device_autopilot_apis">LEGITIMATE ANDROID APIS ONLY</string>
+    <string name="device_autopilot_subtitle">Choose what SOVARIX prioritizes when balancing performance, thermals, and battery.</string>
+    <string name="goal_cool">Keep my phone cool</string>
+    <string name="goal_battery">Preserve battery</string>
+    <string name="goal_gaming">Stable gaming performance</string>
+    <string name="goal_overhead">Reduce SOVARIX overhead</string>
+    <string name="goal_recording">Prioritize recording</string>
+    <string name="device_dna_title">YOUR DEVICE DNA 2.0</string>
+    <string name="dna_thermal_response">Thermal response</string>
+    <string name="dna_gaming_endurance">Gaming endurance</string>
+    <string name="dna_recovery_behavior">Recovery behavior</string>
+    <string name="dna_battery_response">Battery response</string>
+    <string name="dna_learned_behavior">LEARNED DEVICE BEHAVIOR</string>
+    <string name="device_forensics_title">DEVICE FORENSICS &amp; REPAIR BASELINE</string>
+    <string name="device_forensics_subtitle">Tracks long-term thermal drift and compares behavioral metrics before and after hardware service.</string>
+    <string name="btn_capture_baseline">CAPTURE BASELINE</string>
+    <string name="btn_post_repair">POST-REPAIR RECORD</string>
+    <string name="device_overhead_title">HOW MUCH DOES SOVARIX COST?</string>
+    <string name="device_overhead_subtitle">SOVARIX monitors and discloses its own resource footprint to ensure it never becomes the thermal problem.</string>
+    <string name="overhead_cpu">CPU COST</string>
+    <string name="overhead_memory">MEMORY (PSS)</string>
+    <string name="overhead_sampling">SAMPLING</string>
+    <string name="overhead_battery">BATTERY</string>
+    <string name="btn_export_json">EXPORT BLACK BOX JSON</string>
+    <string name="btn_purge_history">PURGE HISTORY</string>
+    <string name="privacy_title">PRIVACY &amp; LOCAL ARCHITECTURE</string>
+    <string name="privacy_body">SOVARIX is strictly local-first. Zero telemetry, screen frames, audio, or gameplay metrics are sent to the cloud. Local AI operates on-device without remote tracking.</string>
+
+    <!-- Errors & Toast Messages -->
+    <string name="perm_screen_capture_required">Screen capture permission is required.</string>
+    <string name="perm_screen_capture_granted">Screen capture authorized for Special Moments</string>
+    <string name="perm_screen_capture_denied">Screen capture not granted. Moments will be recorded as Device Events.</string>
+    <string name="perm_notifications_off">Notifications are off. End the session using Stop inside SOVARIX.</string>
+    <string name="session_exported">Session exported successfully.</string>
+    <string name="session_export_failed">Could not export. Choose another destination.</string>
+
+    <!-- Lab Tests & Observation Controls -->
+    <string name="lab_tab_experiments">LAB TESTS</string>
+    <string name="lab_tab_simulations">WHAT-IF SIMULATOR</string>
+    <string name="lab_running_test">TEST IN PROGRESS</string>
+    <string name="lab_available_tests">AVAILABLE TESTS</string>
+    <string name="lab_run_test">Run Test</string>
+    <string name="lab_stop_test">Stop Test</string>
+    <string name="lab_step_baseline">Step 1/2: Normal Baseline</string>
+    <string name="lab_step_treatment">Step 2/2: Feature Active</string>
+    <string name="lab_safety_guard_active">Safety Guard Active: Auto-stops if phone gets hot or battery drops below 10%.</string>
+    <string name="lab_test_history">PREVIOUS TEST RESULTS</string>
+    <string name="lab_no_tests_yet">No completed tests yet. Run any test above to see real battery and thermal impact.</string>
+    <string name="home_start_observation">START CONTINUOUS OBSERVATION</string>
+    <string name="home_stop_observation">STOP</string>
+    <string name="home_twin_active">TWIN ACTIVE · LIVE TELEMETRY</string>
+    <string name="home_twin_standby">TWIN STANDBY</string>
+</resources>

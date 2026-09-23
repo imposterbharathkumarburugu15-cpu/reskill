@@ -213,6 +213,8 @@ class TwinEngine(
         val decision = decisionEngine.decide(baseTwinState, forecastRes, anomalyRes, simulationRes, insights)
         latestDecision = decision
 
+        val autopilotDecision = AutopilotDecisionEngine.evaluate(baseTwinState, state.deviceGoal, state.dna.behaviorModel)
+
         // 5. VERIFICATION LOOP
         // Auto-enqueue a 2-minute prediction ticket if none is currently pending and a valid projection exists
         var pendingTickets = state.pending
@@ -301,6 +303,8 @@ class TwinEngine(
 
         // Update active TwinState snapshot
         state = baseTwinState.copy(
+            productState = autopilotDecision.productState,
+            autopilotDecision = autopilotDecision,
             anomaly = Anomaly(anomalyRes.risk, anomalyRes.evidence),
             anomalyIndicators = anomalyRes.indicators,
             forecasts = forecastRes.forecasts,
@@ -314,6 +318,14 @@ class TwinEngine(
             stop(s.wallMs, if (policy.stopSession) "Critical thermal status" else "One-hour session limit reached")
         }
         return state
+    }
+
+    fun setDeviceGoal(goal: DeviceGoal) {
+        state = state.copy(deviceGoal = goal)
+    }
+
+    fun setRepairBaseline(comparison: RepairBaselineComparison) {
+        state = state.copy(dna = state.dna.copy(repairBaseline = comparison))
     }
 
     /** Coroutine-based concurrent execution of parallel intelligence modules */
@@ -389,11 +401,36 @@ class TwinEngine(
                 "CANCELLED — session ended", true, t.baselineTemperature, t.forecast.temperatureBiasApplied
             )
         }
+        val startTemp = sessionStartTemperatureC
+        val endTemp = state.latest?.batteryC
+        val startBatt = history.firstOrNull()?.batteryPct
+        val endBatt = state.latest?.batteryPct
+        val durMins = if (startedAt > 0) ((state.latest?.elapsedMs ?: startedAt) - startedAt) / 60_000.0 else 0.0
+
+        val verification = state.autoCoolVerification
+        val updatedBehavior = state.dna.behaviorModel.updateWithSession(
+            sessionWorkload = workload,
+            durationMinutes = durMins,
+            startTempC = startTemp,
+            endTempC = endTemp,
+            startBatteryPct = startBatt,
+            endBatteryPct = endBatt,
+            wasRecording = (state.overhead?.gamingCaptureState == "RECORDING" || state.overhead?.gamingCaptureState == "BUFFERING"),
+            wasCharging = state.chargingState == true,
+            interventionApplied = (state.autoCoolDecision?.strategy?.level ?: 0) > 0,
+            postInterventionCoolingRate = verification?.temperatureDelta?.let { delta ->
+                val sec = verification.coolingResponseTimeSec
+                if (sec > 0) (delta / (sec / 60.0)) else null
+            } ?: state.dna.thermalDNA.averageCoolingRateCPerMin
+        )
+        val sessionDNA = if (summaries.isNotEmpty()) LearningEngine.completedSession(state.dna, summaries) else state.dna
+        val finalDNA = sessionDNA.copy(behaviorModel = updatedBehavior)
+
         state = state.copy(
             running = false,
             pending = emptyList(),
             verifications = (state.verifications + canceled).takeLast(60),
-            dna = if (summaries.isNotEmpty()) LearningEngine.completedSession(state.dna, summaries) else state.dna,
+            dna = finalDNA,
             policy = ObservationPolicy(ObservationMode.LOW_POWER, config.lowPowerMs, "Session stopped", false)
         )
         event(wall, "SESSION", reason)
