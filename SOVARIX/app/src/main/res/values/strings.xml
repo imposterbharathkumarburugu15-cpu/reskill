@@ -49,16 +49,17 @@
     <string name="lab_what_if_hero">WHAT HAPPENS IF...</string>
 
     <!-- Thermal Notifications (Exact Prompt Copy) -->
-    <string name="thermal_alert_title">SOVARIX · Thermal Alert</string>
-    <string name="thermal_alert_body">Your phone is heating during gaming.</string>
+    <string name="thermal_alert_title">SOVARIX · Thermal Rising</string>
+    <string name="thermal_alert_body">Your phone is heating faster than usual.</string>
     <string name="thermal_warning_title">SOVARIX · Thermal Warning</string>
-    <string name="thermal_warning_body">Thermal load is high. Performance may decrease.</string>
+    <string name="thermal_warning_body">Temperature is approaching your learned threshold.</string>
     <string name="thermal_autocool_title">SOVARIX · Auto-Cool</string>
-    <string name="thermal_autocool_body">Auto-Cool is active. Monitoring recovery.</string>
-    <string name="thermal_stable_title">SOVARIX · Thermal Stable</string>
-    <string name="thermal_stable_body">Thermal conditions are returning to normal.</string>
-    <string name="critical_thermal_title">SOVARIX · Critical Thermal State</string>
-    <string name="critical_thermal_body">Device temperature is critical. Stop gaming and allow it to cool.</string>
+    <string name="thermal_autocool_body">SOVARIX activated thermal protection.</string>
+    <string name="thermal_stable_title">SOVARIX · Recovery</string>
+    <string name="thermal_stable_body">Temperature has returned toward your normal range.</string>
+    <string name="critical_thermal_title">SOVARIX · Critical</string>
+    <string name="critical_thermal_body">Device temperature is unusually high.</string>
+    <string name="game_control_unavailable">Direct game workload control unavailable on this device.</string>
 
     <!-- Legacy / Multilingual Fallbacks -->
     <string name="thermal_shield_title">SOVARIX · Thermal Warning</string>

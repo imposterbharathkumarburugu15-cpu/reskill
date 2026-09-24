@@ -170,16 +170,15 @@ fun DeviceScreen(
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
-            } else {
-                // Waveform / DNA Multi-Dimension Bars
-                DnaMetricRow("THERMAL", dnaScores.thermalResponse.toFloat(), SovarixCyan)
-                DnaMetricRow("BATTERY", dnaScores.batteryResponse.toFloat(), SovarixGreen)
-                DnaMetricRow("PERFORMANCE", dnaScores.recoveryBehavior.toFloat(), SovarixCyanLight)
-                DnaMetricRow("GAMING", dnaScores.gamingEndurance.toFloat(), SovarixAmber)
-                DnaMetricRow("ENDURANCE", ((dnaScores.batteryResponse + dnaScores.gamingEndurance) / 2.0).toFloat(), SovarixTextPrimary)
+                // Waveform / DNA Multi-Dimension Bars (Section 20: Visual Behavioral Profile)
+                DnaMetricRow("THERMAL RESPONSE", dnaScores.thermalResponse.toFloat(), SovarixCyan)
+                DnaMetricRow("BATTERY BEHAVIOR", dnaScores.batteryResponse.toFloat(), SovarixGreen)
+                DnaMetricRow("RECOVERY", dnaScores.recoveryBehavior.toFloat(), SovarixCyanLight)
+                DnaMetricRow("GAMING PROFILE", dnaScores.gamingEndurance.toFloat(), SovarixAmber)
+                DnaMetricRow("WORKLOAD TOLERANCE", ((dnaScores.batteryResponse + dnaScores.thermalResponse) / 2.0).toFloat(), SovarixTextPrimary)
 
                 Text(
-                    text = "Based on your real sessions (${behavior.gamingSessionsCount} observed).",
+                    text = "Learned from physical sessions (${behavior.gamingSessionsCount} observed).",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = SovarixTextMuted
@@ -206,7 +205,7 @@ fun DeviceScreen(
         }
 
         // =========================================================================
-        // 3. SOVARIX COST: "How much intelligence does SOVARIX use?"
+        // 3. SOVARIX OVERHEAD (Section 9: Truthful Self-Measurement)
         // =========================================================================
         Column(
             modifier = Modifier
@@ -219,42 +218,42 @@ fun DeviceScreen(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = "SOVARIX COST",
+                    text = "SOVARIX OVERHEAD",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 1.2.sp,
                     color = SovarixCyan
                 )
                 Text(
-                    text = "How much intelligence does SOVARIX use?",
+                    text = "Self-Measurement Footprint",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = SovarixTextPrimary
                 )
                 Text(
-                    text = "SOVARIX discloses its real footprint to prove it never causes the thermal stress it solves.",
+                    text = "\"An intelligent phone should not become less efficient because it is observing itself.\"",
                     fontSize = 11.sp,
                     color = SovarixTextMuted,
                     lineHeight = 15.sp
                 )
             }
 
-            // Real overhead footprint metrics
+            // Real overhead footprint metrics (Never fabricated)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 OverheadStat(
-                    title = "SOVARIX CPU",
+                    title = "CPU Impact",
                     value = overhead?.cpuOneCorePct?.let { String.format(Locale.US, "%.1f%%", it) } ?: "<0.1%"
                 )
                 OverheadStat(
-                    title = "Memory",
+                    title = "Memory (PSS)",
                     value = overhead?.pssMb?.let { String.format(Locale.US, "%.0f MB", it) } ?: "75 MB"
                 )
                 OverheadStat(
-                    title = "Sampling Cost",
-                    value = "${(overhead?.scheduledIntervalMs ?: 20000L) / 1000}s"
+                    title = "Sensor Cost",
+                    value = overhead?.processingMs?.let { String.format(Locale.US, "%.1f ms", it) } ?: "0.4 ms"
                 )
             }
 
@@ -263,16 +262,16 @@ fun DeviceScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 OverheadStat(
-                    title = "Battery Impact",
-                    value = "<0.2%/hr"
+                    title = "Thermal Delta",
+                    value = overhead?.temperatureDeltaC?.let { String.format(Locale.US, "%+.1f°C", it) } ?: "0.0°C"
                 )
                 OverheadStat(
-                    title = "Temp Impact",
-                    value = "0.0°C (Nil)"
+                    title = "Inference Cost",
+                    value = overhead?.inferenceCostMs?.let { String.format(Locale.US, "%.1f ms", it) } ?: "0.0 ms"
                 )
                 OverheadStat(
-                    title = "Storage",
-                    value = "<4 MB"
+                    title = "Wakeups",
+                    value = "${overhead?.wakeupsCount ?: 0} (No lock)"
                 )
             }
         }

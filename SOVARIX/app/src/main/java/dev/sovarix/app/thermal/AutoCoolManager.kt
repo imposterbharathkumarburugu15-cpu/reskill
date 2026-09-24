@@ -153,7 +153,7 @@ class AutoCoolManager(
         if (to.level > from.level) {
             // Escalation: Apply mitigations
             applyFirstLineMitigation(to)
-            val actionDescription = decision.actions.joinToString(", ") { it.description }
+            val actionDescription = decision.actions.joinToString(", ") { it.description } + " · Direct game workload control unavailable on this device."
             val logMsg = "${decision.strategy.label}: $actionDescription"
             recentInterventionLogs.add(logMsg)
 
@@ -182,7 +182,7 @@ class AutoCoolManager(
                 intervention = actionDescription,
                 predictedOutcome = predicted60s,
                 actualOutcome = currentTemp,
-                notes = "Auto-Cool activated for $game: ${decision.reason}"
+                notes = "Auto-Cool activated for $game. Direct game workload control unavailable on this device; legitimate self-observation mitigations applied."
             )
         } else if (to.level < from.level) {
             // De-escalation / Recovery: Gradual restoration

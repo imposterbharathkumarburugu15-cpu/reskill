@@ -1,10 +1,91 @@
 package dev.sovarix.core
 
-enum class ObservationMode { LOW_POWER, NORMAL, HIGH_ACTIVITY, RECOVERY }
+enum class ObservationMode { LOW_POWER, NORMAL, HIGH_ACTIVITY, THERMAL_PROTECTION, RECOVERY }
 enum class Workload { UNSPECIFIED, IDLE, EVERYDAY, GAMING, RECOVERY }
 enum class Risk { UNKNOWN, NORMAL, WATCH, ANOMALY }
 enum class Availability { AVAILABLE, UNAVAILABLE, UNKNOWN }
 enum class TwinPath { STANDARD, ADVANCED }
+
+/**
+ * Section 7: Calibrated device thermal states.
+ */
+enum class DeviceThermalState(val label: String) {
+    NORMAL("NORMAL"),
+    WARMING("WARMING"),
+    HOT("HOT"),
+    PRE_COOL("PRE-COOL"),
+    COOLING("COOLING"),
+    RECOVERY("RECOVERY"),
+    CRITICAL("CRITICAL")
+}
+
+/**
+ * Section 3: Concrete multi-horizon numerical prediction record.
+ */
+data class PredictionRecord(
+    val metric: String, // "temperature", "battery", "thermal_state"
+    val predictedValue: Double,
+    val predictionTime: Long,
+    val horizonSeconds: Int,
+    val confidence: Double,
+    val modelVersion: String = "v2.0-adaptive-timeseries",
+    val riskTrend: Risk = Risk.NORMAL
+)
+
+/**
+ * Section 4: Closed-loop Prediction Contract.
+ * Whenever SOVARIX makes a meaningful prediction, it stores the contract,
+ * waits for actual elapsed time, and evaluates: PREDICTED vs ACTUAL vs ERROR.
+ */
+data class PredictionContract(
+    val id: Long,
+    val metric: String = "temperature",
+    val targetHorizonSeconds: Int,
+    val createdAtElapsedMs: Long,
+    val dueAtElapsedMs: Long,
+    val predictedValue: Double,
+    val baselineValue: Double?,
+    val confidence: Double,
+    val modelVersion: String = "v2.0-adaptive-timeseries",
+    val actionContext: String = "No intervention",
+    val workload: Workload = Workload.UNSPECIFIED,
+    val charging: Boolean? = null,
+    val actualValue: Double? = null,
+    val signedError: Double? = null,
+    val status: String = "PENDING", // PENDING, VERIFIED, MISSED, CANCELLED
+    val resolvedAtWallMs: Long? = null
+) {
+    val errorAbsolute: Double? get() = signedError?.let { kotlin.math.abs(it) }
+}
+
+/**
+ * Section 10: Causal Memory representation.
+ * Stores behavioral relationships and multi-stage sequences discovered on THIS device.
+ * e.g., GAMING + HIGH BRIGHTNESS -> HIGH WORKLOAD -> THERMAL RISE -> PERFORMANCE RISK -> AUTO-COOL -> TEMPERATURE RECOVERY
+ */
+data class CausalChain(
+    val id: String,
+    val timestamp: Long,
+    val trigger: String,
+    val stages: List<String>,
+    val measuredDeltaC: Double,
+    val recoveryTimeSec: Long,
+    val frequency: Int = 1,
+    val confidence: Double = 0.85,
+    val learnedConclusion: String = ""
+)
+
+/**
+ * Section 5: Structured simulation request generated from natural language intent.
+ */
+data class StructuredSimulationRequest(
+    val intent: String = "SIMULATE",
+    val durationMinutes: Int = 15,
+    val workload: Workload = Workload.GAMING,
+    val lever: ControllableLever = ControllableLever.WORKLOAD_INTENSITY,
+    val targetValue: String = "50%",
+    val rawPrompt: String = ""
+)
 
 data class CapabilityProfile(
     val manufacturer: String, val model: String, val androidVersion: String, val sdk: Int,
@@ -87,6 +168,7 @@ data class DeviceDNA(val sessions: Int = 0, val observations: Int = 0,
     val temperatureBiasByHorizon: Map<Int, Double> = emptyMap(),
     val verifiedCount: Int = 0, val totalAbsoluteErrorC: Double = 0.0,
     val causalRelationships: List<CausalRelationship> = emptyList(),
+    val causalChains: List<CausalChain> = emptyList(),
     val experimentCount: Int = 0,
     val behavioralFingerprint: Map<String, Baseline> = emptyMap(),
     val thermalDNA: ThermalDNAProfile = ThermalDNAProfile(),
@@ -116,7 +198,9 @@ data class Overhead(
     val gamingCaptureState: String? = null,
     val gamingBufferMemoryMb: Double? = null,
     val gamingBufferFps: Int? = null,
-    val gamingSensorRateHz: Int? = null
+    val gamingSensorRateHz: Int? = null,
+    val inferenceCostMs: Double = 0.0,
+    val wakeupsCount: Int = 0
 )
 data class TwinState(
     // 1. Observable physical device reality (Single Source of Truth)
@@ -143,6 +227,23 @@ data class TwinState(
     val deviceGoal: DeviceGoal = DeviceGoal.KEEP_PHONE_COOL,
     val autopilotDecision: AutopilotDecision? = null,
 
+    // Section 2: Truthful physical device fields & aliases
+    val deviceTemperature: Double? = null,
+    val cpuInformation: String? = null,
+    val gpuInformation: String? = "UNAVAILABLE (No public GPU telemetry API)",
+    val sensorAvailability: Map<String, Boolean> = emptyMap(),
+    val samplingRate: Double = 0.1,
+    val thermalVelocity: Double = 0.0,
+    val thermalAcceleration: Double = 0.0,
+    val batteryDrainRate: Double = 0.0,
+    val anomalyState: String = "NOMINAL",
+    val confidenceInfo: String = "Calibrated on physical device history",
+    val currentThermalState: DeviceThermalState = DeviceThermalState.NORMAL,
+
+    // Contracts & Causal Memory
+    val predictionContracts: List<PredictionContract> = emptyList(),
+    val causalChains: List<CausalChain> = emptyList(),
+
     // 2. Operational context & history snapshots
     val latest: Sample? = null,
     val history: List<Sample> = emptyList(),
@@ -163,7 +264,13 @@ data class TwinState(
     val autoCoolSettings: AutoCoolSettings = AutoCoolSettings(),
     val running: Boolean = false,
     val error: String? = null
-)
+) {
+    // Backwards & Forward compatibility aliases per Section 2
+    val batteryPercentage: Double? get() = battery
+    val batteryTemperature: Double? get() = temperature
+    val thermalStatus: Int? get() = thermalState
+    val availableRAM: Long? get() = availableMemoryBytes
+}
 
 // =========================================================
 // PARALLEL INTELLIGENCE RESULT MODELS
@@ -184,9 +291,13 @@ data class ForecastResult(
     val forecast10s: Projection? = null,
     val forecast30s: Projection? = null,
     val forecast60s: Projection? = null,
+    val forecast3m: Projection? = null,
     val forecast5m: Projection? = null,
     val forecast15m: Projection? = null,
-    val recoveryTrajectory: Projection? = null
+    val recoveryTrajectory: Projection? = null,
+    val predictedThermalState: DeviceThermalState = DeviceThermalState.NORMAL,
+    val performanceRiskTrend: Risk = Risk.NORMAL,
+    val predictionRecords: List<PredictionRecord> = emptyList()
 )
 
 /**

@@ -67,24 +67,27 @@ fun LabScreen(
     val currentBattery = currentSample?.batteryPct ?: s.battery ?: 75.0
 
     val scenarios = listOf(
-        "Play for 60 minutes",
-        "Lower workload",
-        "Keep performance stable",
-        "Reduce battery drain"
+        "+15 MIN GAMING",
+        "REDUCE WORKLOAD",
+        "REDUCE BRIGHTNESS",
+        "CONTINUE CURRENT LOAD",
+        "CUSTOM"
     )
 
     var activeScenario by remember { mutableStateOf(scenarios[0]) }
-    var gamingDurationMin by remember { mutableFloatStateOf(60f) }
+    var customQueryText by remember { mutableStateOf("What if I stop monitoring?") }
+    var gamingDurationMin by remember { mutableFloatStateOf(15f) }
     var showExperimentsSheet by remember { mutableStateOf(false) }
     var consentTargetExp by remember { mutableStateOf<Experiment?>(null) }
 
     // Run simulation query
     LaunchedEffect(activeScenario, gamingDurationMin) {
         val query = when (activeScenario) {
-            "Play for 60 minutes" -> "What happens if I game for ${gamingDurationMin.roundToInt()} minutes?"
-            "Lower workload" -> "What happens if Auto-Cool throttles background sensors?"
-            "Keep performance stable" -> "What happens if device prioritizes sustained FPS?"
-            "Reduce battery drain" -> "What happens if power saving governor engages?"
+            "+15 MIN GAMING" -> "+15 min gaming"
+            "REDUCE WORKLOAD" -> "What if workload is reduced?"
+            "REDUCE BRIGHTNESS" -> "What if screen brightness is reduced?"
+            "CONTINUE CURRENT LOAD" -> "What happens if this thermal trend continues?"
+            "CUSTOM" -> customQueryText
             else -> activeScenario
         }
         repo.simulateQuery(query)
@@ -92,12 +95,12 @@ fun LabScreen(
 
     val result = simOutcome as? SimulationResult
     val predictedTemp = when (activeScenario) {
-        "Lower workload" -> (currentTemp - 1.2).coerceAtLeast(35.5)
-        "Reduce battery drain" -> (currentTemp - 0.8).coerceAtLeast(36.0)
-        "Keep performance stable" -> (currentTemp + 2.4)
+        "REDUCE WORKLOAD" -> (currentTemp - 1.2).coerceAtLeast(35.5)
+        "REDUCE BRIGHTNESS" -> (currentTemp - 0.8).coerceAtLeast(36.0)
+        "CONTINUE CURRENT LOAD" -> (currentTemp + 2.2)
         else -> result?.recommendedScenario?.predictedTemperatureC
             ?: result?.scenarios?.firstOrNull()?.predictedTemperatureC
-            ?: (currentTemp + (gamingDurationMin / 60.0) * 1.8)
+            ?: (currentTemp + 2.4)
     }
 
     val possibleResponse = when {
@@ -115,7 +118,7 @@ fun LabScreen(
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         // =========================================================================
-        // 1. HERO HEADER
+        // 1. HERO HEADER (Section 17)
         // =========================================================================
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -131,7 +134,7 @@ fun LabScreen(
                     color = SovarixTextPrimary
                 )
                 Text(
-                    text = "\"What do you want to test?\"",
+                    text = "Experiment before you act.",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = SovarixCyan
@@ -171,11 +174,11 @@ fun LabScreen(
         }
 
         // =========================================================================
-        // 2. INTERACTIVE PROMPTS: "WHAT IF I..."
+        // 2. INTERACTIVE PROMPTS: "WHAT DO YOU WANT TO TEST?"
         // =========================================================================
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
-                text = "WHAT IF I...",
+                text = "WHAT DO YOU WANT TO TEST?",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 1.4.sp,
@@ -209,10 +212,38 @@ fun LabScreen(
                     }
                 }
             }
+
+            if (activeScenario == "CUSTOM") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = customQueryText,
+                        onValueChange = { customQueryText = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("e.g., What if I stop monitoring?", fontSize = 12.sp, color = SovarixTextMuted) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = SovarixCyan,
+                            unfocusedBorderColor = SovarixBorder,
+                            focusedTextColor = SovarixTextPrimary,
+                            unfocusedTextColor = SovarixTextPrimary
+                        )
+                    )
+                    Button(
+                        onClick = { scope.launch { repo.simulateQuery(customQueryText) } },
+                        colors = ButtonDefaults.buttonColors(containerColor = SovarixCyan)
+                    ) {
+                        Text("TEST", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = SovarixBlack)
+                    }
+                }
+            }
         }
 
         // =========================================================================
-        // 3. DIVERGING TIMELINES VISUALIZATION
+        // 3. DIVERGING TIMELINES VISUALIZATION (CURRENT FUTURE vs ALTERNATIVE FUTURE)
         // =========================================================================
         Column(
             modifier = Modifier
@@ -223,54 +254,59 @@ fun LabScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Diverging state figures: CURRENT REALITY vs SIMULATED FUTURE
+            // Diverging state figures: CURRENT FUTURE vs ALTERNATIVE FUTURE
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                // CURRENT REALITY
+                // CURRENT FUTURE
                 Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(
-                        text = "CURRENT REALITY",
+                        text = "CURRENT FUTURE",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp,
                         color = SovarixTextMuted
                     )
+                    val baseScenario = result?.scenarios?.find { it.id == "current_path" || it.id == "scenario_a" }
+                    val baseTemp = baseScenario?.predictedTemperatureC ?: currentTemp
                     Text(
-                        text = String.format(Locale.US, "%.1f°", currentTemp),
+                        text = String.format(Locale.US, "%.1f°", baseTemp),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
                         color = SovarixTextPrimary
                     )
                     Text(
-                        text = "Stable Baseline",
-                        fontSize = 10.5.sp,
+                        text = baseScenario?.name ?: "Current Trajectory",
+                        fontSize = 10.sp,
                         color = SovarixTextSecondary
                     )
                 }
 
-                // SIMULATED FUTURE
+                // ALTERNATIVE FUTURE
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        text = "SIMULATED FUTURE",
+                        text = "ALTERNATIVE FUTURE",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.ExtraBold,
                         letterSpacing = 1.sp,
                         color = SovarixCyan
                     )
-                    val futureColor = if (predictedTemp >= 40.0) SovarixOrange else SovarixCyan
+                    val altScenario = result?.scenarios?.find { it.id == "alternative_path" || it.id.startsWith("scenario_lever") } ?: result?.recommendedScenario
+                    val altTemp = altScenario?.predictedTemperatureC ?: predictedTemp
+                    val futureColor = if (altTemp >= 40.0) SovarixOrange else SovarixCyan
                     Text(
-                        text = String.format(Locale.US, "%.1f°", predictedTemp),
+                        text = String.format(Locale.US, "%.1f°", altTemp),
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Black,
                         color = futureColor
                     )
-                    val delta = predictedTemp - currentTemp
+                    val baseScenario = result?.scenarios?.find { it.id == "current_path" || it.id == "scenario_a" }
+                    val delta = altTemp - (baseScenario?.predictedTemperatureC ?: currentTemp)
                     Text(
                         text = "${if (delta >= 0) "+" else ""}${String.format(Locale.US, "%.1f°C", delta)}",
                         fontSize = 11.sp,

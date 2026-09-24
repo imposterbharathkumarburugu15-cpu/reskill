@@ -32,6 +32,7 @@ class TwinEngine(
     private var sessionStartTemperatureC: Double? = null
     private var eventId = initialEvents.maxOfOrNull { it.id } ?: 0L
     private var ticketId = initialVerifications.maxOfOrNull { it.id } ?: 0L
+    private var contractId = 0L
 
     var state = TwinState(
         dna = initialDNA,
@@ -160,6 +161,26 @@ class TwinEngine(
         )
         val policy = controller.choose(s, thermal?.slopePerMinute, overhead, economy)
 
+        val thermalVel = thermal?.slopePerMinute ?: 0.0
+        val thermalAcc = if (list.size >= 6) {
+            val half = list.size / 2
+            val oldHalf = list.subList(0, half)
+            val newHalf = list.subList(half, list.size)
+            val oldSlope = Statistics.fit(oldHalf, config) { it.batteryC }?.slopePerMinute ?: 0.0
+            val newSlope = Statistics.fit(newHalf, config) { it.batteryC }?.slopePerMinute ?: 0.0
+            newSlope - oldSlope
+        } else 0.0
+        val battDrain = -(battery?.slopePerMinute ?: 0.0).coerceAtLeast(0.0)
+
+        val devThermalState = when {
+            (s.thermalStatus ?: 0) >= 4 || (s.batteryC != null && s.batteryC >= 45.0) -> DeviceThermalState.CRITICAL
+            (s.thermalStatus ?: 0) >= 3 || (s.batteryC != null && s.batteryC >= 42.0) -> DeviceThermalState.HOT
+            policy.mode == ObservationMode.THERMAL_PROTECTION -> DeviceThermalState.COOLING
+            s.workload == Workload.RECOVERY -> DeviceThermalState.RECOVERY
+            (s.batteryC != null && s.batteryC >= 39.5) -> DeviceThermalState.WARMING
+            else -> DeviceThermalState.NORMAL
+        }
+
         // 1. Single Source of Device Reality: Immutable TwinState snapshot
         val baseTwinState = TwinState(
             timestamp = s.wallMs,
@@ -179,6 +200,21 @@ class TwinEngine(
             motionIntensity = motion?.movementIntensity ?: 0f,
             performanceState = if ((s.thermalStatus ?: 0) >= 2) "THROTTLING_RISK" else "STABLE",
             confidence = 1.0,
+            samplingRate = 1000.0 / policy.intervalMs.coerceAtLeast(1000),
+            sensorAvailability = mapOf(
+                "battery" to (s.batteryPct != null),
+                "thermal" to (s.thermalStatus != null),
+                "headroom" to (s.headroom != null),
+                "motion" to (motion != null)
+            ),
+            thermalVelocity = thermalVel,
+            thermalAcceleration = thermalAcc,
+            batteryDrainRate = battDrain,
+            anomalyState = latestAnomaly?.type ?: "NOMINAL",
+            confidenceInfo = "Calibrated on physical device history (${state.dna.sessions} sessions)",
+            currentThermalState = devThermalState,
+            predictionContracts = state.predictionContracts,
+            causalChains = state.causalChains,
             latest = s,
             history = list,
             policy = policy,
@@ -197,7 +233,7 @@ class TwinEngine(
         // Independently consume baseTwinState; no sequential dependency.
         val forecastRes = futureEngine.evaluate(baseTwinState)
         val anomalyRes = anomalyEngine.evaluate(baseTwinState)
-        val simulationRes = simulationEngine.evaluate(baseTwinState, forecastRes.forecasts.firstOrNull())
+        val simulationRes = simulationEngine.evaluate(baseTwinState)
         val gamingRes = gamingIntelligence.evaluateIntelligence(baseTwinState)
 
         latestForecast = forecastRes
@@ -215,7 +251,28 @@ class TwinEngine(
 
         val autopilotDecision = AutopilotDecisionEngine.evaluate(baseTwinState, state.deviceGoal, state.dna.behaviorModel)
 
-        // 5. VERIFICATION LOOP
+        // 5. PREDICTION CONTRACT & VERIFICATION LOOP (Section 4)
+        var contracts = state.predictionContracts.toMutableList()
+        val pred60 = forecastRes.forecast60s?.value ?: forecastRes.forecasts.firstOrNull { it.horizonMinutes == 1 }?.temperature?.value
+        if (config.autoEnqueueVerification && pred60 != null && contracts.none { it.targetHorizonSeconds == 60 && it.status == "PENDING" } && s.batteryC != null) {
+            contracts.add(
+                PredictionContract(
+                    id = ++contractId,
+                    metric = "temperature",
+                    targetHorizonSeconds = 60,
+                    createdAtElapsedMs = s.elapsedMs,
+                    dueAtElapsedMs = s.elapsedMs + 60_000L,
+                    predictedValue = pred60,
+                    baselineValue = s.batteryC,
+                    confidence = forecastRes.confidence,
+                    modelVersion = "v2.0-statistical-timeseries",
+                    actionContext = "Nominal monitoring",
+                    workload = s.workload,
+                    charging = s.charging
+                )
+            )
+        }
+
         // Auto-enqueue a 2-minute prediction ticket if none is currently pending and a valid projection exists
         var pendingTickets = state.pending
         val twoMinForecast = forecastRes.forecasts.firstOrNull { it.horizonMinutes == 2 }
@@ -236,11 +293,31 @@ class TwinEngine(
         val resolved = pendingTickets.mapNotNull { verificationEngine.resolve(it, s, it.id in changedTickets) }
         val resolvedResults = pendingTickets.mapNotNull { verificationEngine.resolveResult(it, s, it.id in changedTickets) }
 
-        // 6. LEARNING ENGINE
+        // Resolve PredictionContracts against real physical device sample
+        val updatedContracts = contracts.map { contract ->
+            if (contract.status == "PENDING") {
+                val contextChanged = contract.workload != s.workload || contract.charging != s.charging
+                verificationEngine.resolveContract(contract, s, contextChanged) ?: contract
+            } else contract
+        }
+
+        // 6. LEARNING ENGINE (Section 4, 11)
         var dna = state.dna
         resolvedResults.forEach {
             dna = LearningEngine.verified(dna, it)
             changedTickets.remove(it.ticketId)
+        }
+        updatedContracts.filter { it.status == "VERIFIED" && !state.predictionContracts.any { old -> old.id == it.id && old.status == "VERIFIED" } }.forEach { verifiedContract ->
+            dna = LearningEngine.verified(dna, verifiedContract)
+            blackBox.record(
+                eventType = "PREDICTION_VERIFIED",
+                twinState = baseTwinState,
+                predictedOutcome = verifiedContract.predictedValue,
+                actualOutcome = verifiedContract.actualValue,
+                predictionError = verifiedContract.signedError,
+                notes = "Horizon ${verifiedContract.targetHorizonSeconds}s: Predicted ${String.format(java.util.Locale.US, "%.1f°C", verifiedContract.predictedValue)} vs Actual ${String.format(java.util.Locale.US, "%.1f°C", verifiedContract.actualValue ?: 0.0)} (Error ${String.format(java.util.Locale.US, "%+.1f°C", verifiedContract.signedError ?: 0.0)})"
+            )
+            event(s.wallMs, "VERIFIED", "Horizon ${verifiedContract.targetHorizonSeconds}s verified. Error: ${String.format(java.util.Locale.US, "%+.1f°C", verifiedContract.signedError ?: 0.0)}")
         }
 
         // 7. INCIDENT ENGINE — detect and reconstruct device anomalies
@@ -257,7 +334,20 @@ class TwinEngine(
             )
         }
 
-        // 8. EXPERIMENT ENGINE — feed observations during active experiments
+        // 8. CAUSAL MEMORY ENGINE (Section 10)
+        val discoveredChains = CausalMemoryEngine.discover(baseTwinState, incident, decision)
+        val updatedCausalChains = (state.causalChains + discoveredChains).distinctBy { it.id }.takeLast(20)
+        if (discoveredChains.isNotEmpty()) {
+            discoveredChains.forEach { chain ->
+                blackBox.record(
+                    eventType = "CAUSAL_DISCOVERY",
+                    twinState = baseTwinState,
+                    notes = "${chain.trigger} -> ${chain.stages.joinToString(" -> ")}"
+                )
+            }
+        }
+
+        // 9. EXPERIMENT ENGINE — feed observations during active experiments
         val activeExp = experimentEngine.getActiveExperiment()
         if (activeExp != null) {
             val updatedExp = experimentEngine.observe(s, overhead)
@@ -278,7 +368,7 @@ class TwinEngine(
             }
         }
 
-        // 9. HISTORICAL EVIDENCE LAYER (BLACK BOX)
+        // 10. HISTORICAL EVIDENCE LAYER (BLACK BOX)
         // Record cycle summary & verification outcomes
         val primaryVerification = resolvedResults.firstOrNull()
         blackBox.record(
@@ -310,7 +400,9 @@ class TwinEngine(
             forecasts = forecastRes.forecasts,
             pending = pendingTickets.filterNot { ticket -> resolved.any { it.id == ticket.id } },
             verifications = (state.verifications + resolved).takeLast(60),
-            dna = dna,
+            predictionContracts = updatedContracts.takeLast(30),
+            causalChains = updatedCausalChains,
+            dna = dna.copy(causalChains = updatedCausalChains),
             events = state.events
         )
 

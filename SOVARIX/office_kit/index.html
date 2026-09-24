@@ -3,26 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SOVARIX // Laptop Command Center · Office Kit</title>
+    <title>SOVARIX // Command Center · Minimalist High-Tech HUD</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --void: #07080A;
-            --dark: #0D1015;
-            --surface: #131821;
-            --surface-alt: #1A222D;
-            --border: #263242;
-            --border-bright: #3D4F66;
-            --lime: #B8FF00;
-            --gold: #FFB703;
-            --orange: #FF5400;
-            --red: #FF2A42;
-            --white: #F3F6FA;
-            --muted: #7E8D9F;
+            --void: #000000;
+            --dark: #040608;
+            --surface: #080D14;
+            --surface-elevated: #0F1722;
+            --border: #15202E;
+            --border-active: #223247;
+            --border-accent: rgba(0, 229, 255, 0.35);
+            
+            --cyan: #00E5FF;
+            --cyan-glow: rgba(0, 229, 255, 0.18);
+            --cyan-dim: #042A38;
+            --emerald: #00F5A0;
+            --emerald-glow: rgba(0, 245, 160, 0.18);
+            --amber: #FFB800;
+            --amber-glow: rgba(255, 184, 0, 0.18);
+            --orange: #FF6200;
+            --crimson: #FF2A42;
+            --crimson-glow: rgba(255, 42, 66, 0.22);
+            
+            --white: #F8FAFC;
+            --slate: #8492A6;
+            --muted: #475569;
+            
             --font-mono: 'JetBrains Mono', monospace;
-            --font-sans: 'Outfit', sans-serif;
+            --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         * {
@@ -35,871 +46,1149 @@
             background-color: var(--void);
             color: var(--white);
             font-family: var(--font-sans);
-            line-height: 1.5;
+            line-height: 1.45;
             min-height: 100vh;
             overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.04) 0%, transparent 60%),
+                linear-gradient(rgba(21, 32, 46, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(21, 32, 46, 0.2) 1px, transparent 1px);
+            background-size: 100% 100%, 32px 32px, 32px 32px;
+        }
+
+        /* Scanline Overlay Effect */
+        .hud-scanlines {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 999;
+            opacity: 0.35;
         }
 
         /* Top HUD Header */
         header {
-            background: linear-gradient(180deg, #121720 0%, var(--void) 100%);
+            background: rgba(4, 6, 8, 0.92);
             border-bottom: 1px solid var(--border);
-            padding: 16px 28px;
+            padding: 12px 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             position: sticky;
             top: 0;
             z-index: 100;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
         }
 
         .brand-block {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
         .brand-title {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 900;
             letter-spacing: 3px;
             color: var(--white);
-        }
-
-        .tag-badge {
-            border: 1px solid rgba(184, 255, 0, 0.4);
-            color: var(--lime);
-            font-family: var(--font-mono);
-            font-size: 9px;
-            font-weight: 700;
-            padding: 2px 6px;
-            border-radius: 4px;
-            letter-spacing: 1px;
-        }
-
-        .subtitle {
-            font-family: var(--font-mono);
-            font-size: 9px;
-            color: var(--muted);
-            letter-spacing: 1.5px;
-        }
-
-        .status-beacon {
             display: flex;
             align-items: center;
             gap: 8px;
+        }
+
+        .brand-title span {
+            color: var(--cyan);
+        }
+
+        .tag-badge {
+            border: 1px solid var(--border-accent);
+            background: var(--cyan-dim);
+            color: var(--cyan);
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 3px;
+            letter-spacing: 1.2px;
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--font-mono);
+            font-size: 10px;
+        }
+
+        .telemetry-beacon {
+            display: flex;
+            align-items: center;
+            gap: 7px;
             background: var(--surface);
             border: 1px solid var(--border);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-family: var(--font-mono);
-            font-size: 11px;
-            color: var(--lime);
+            padding: 5px 12px;
+            border-radius: 4px;
+            color: var(--slate);
         }
 
-        .beacon-dot {
-            width: 8px;
-            height: 8px;
+        .telemetry-beacon.online {
+            border-color: rgba(0, 245, 160, 0.35);
+            color: var(--emerald);
+        }
+
+        .beacon-led {
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
-            background: var(--lime);
-            box-shadow: 0 0 10px var(--lime);
-            animation: pulse 1.8s infinite ease-in-out;
+            background: var(--emerald);
+            box-shadow: 0 0 8px var(--emerald);
+            animation: pulse-led 2s infinite ease-in-out;
         }
 
-        @keyframes pulse {
+        @keyframes pulse-led {
             0%, 100% { opacity: 0.4; transform: scale(0.9); }
-            50% { opacity: 1; transform: scale(1.15); }
+            50% { opacity: 1; transform: scale(1.2); }
         }
 
-        /* File Upload Bar */
-        .dropzone-bar {
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-hud {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--white);
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.8px;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-hud:hover {
+            border-color: var(--cyan);
+            background: var(--surface-elevated);
+            color: var(--cyan);
+            box-shadow: 0 0 10px var(--cyan-glow);
+        }
+
+        .btn-hud.active {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+            color: var(--cyan);
+        }
+
+        /* Command HUD Sub-Bar */
+        .hud-subbar {
             background: var(--dark);
             border-bottom: 1px solid var(--border);
-            padding: 12px 28px;
+            padding: 10px 28px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-family: var(--font-mono);
-            font-size: 11px;
+            font-size: 10.5px;
         }
 
-        .dropzone-input {
+        .device-info-bar {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
+            color: var(--slate);
         }
 
-        .btn-action {
-            background: var(--surface-alt);
-            border: 1px solid var(--lime);
-            color: var(--lime);
+        .device-info-bar strong {
+            color: var(--white);
+        }
+
+        .workload-switchers {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .workload-btn {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--muted);
             font-family: var(--font-mono);
+            font-size: 9.5px;
             font-weight: 700;
-            font-size: 11px;
-            padding: 6px 14px;
-            border-radius: 4px;
+            letter-spacing: 0.6px;
+            padding: 4px 10px;
+            border-radius: 3px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
-        .btn-action:hover {
-            background: var(--lime);
-            color: var(--void);
+        .workload-btn:hover {
+            border-color: var(--slate);
+            color: var(--white);
         }
 
-        /* Dashboard Grid Layout */
+        .workload-btn.active {
+            border-color: var(--cyan);
+            background: var(--cyan-dim);
+            color: var(--cyan);
+        }
+
+        /* Dashboard Container */
         .dashboard-container {
-            max-width: 1600px;
+            max-width: 1720px;
             margin: 0 auto;
-            padding: 24px 28px 60px 28px;
+            padding: 20px 28px 60px 28px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 18px;
         }
 
-        .grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .grid-3 {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-        }
-
-        .grid-4 {
+        /* High-Tech Grid Layouts */
+        .hud-grid-4 {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 16px;
         }
 
-        /* Tactical Cards */
-        .cyber-card {
+        .hud-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .hud-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* High-Tech HUD Panels */
+        .hud-panel {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 18px;
+            border-radius: 6px;
+            padding: 16px;
+            position: relative;
             display: flex;
             flex-direction: column;
-            gap: 12px;
-            position: relative;
-            overflow: hidden;
+            gap: 14px;
+            transition: border-color 0.2s ease;
         }
 
-        .cyber-card::before {
-            content: '';
+        .hud-panel:hover {
+            border-color: var(--border-active);
+        }
+
+        /* Corner Bracket Accents (+) */
+        .hud-panel::before,
+        .hud-panel::after {
+            content: '+';
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background: var(--card-accent, var(--border));
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--muted);
+            line-height: 1;
         }
+        .hud-panel::before { top: 4px; left: 6px; }
+        .hud-panel::after { top: 4px; right: 6px; }
 
-        .cyber-card.accent-lime { --card-accent: var(--lime); }
-        .cyber-card.accent-gold { --card-accent: var(--gold); }
-        .cyber-card.accent-orange { --card-accent: var(--orange); }
-        .cyber-card.accent-red { --card-accent: var(--red); }
-
-        .card-header {
+        .panel-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border);
             padding-bottom: 8px;
+            position: relative;
         }
 
-        .card-title {
+        .panel-title {
             font-family: var(--font-mono);
             font-size: 11px;
             font-weight: 700;
-            letter-spacing: 1.2px;
-            color: var(--card-accent, var(--white));
+            letter-spacing: 1.5px;
+            color: var(--cyan);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .card-meta {
+        .panel-meta {
             font-family: var(--font-mono);
             font-size: 9px;
             color: var(--muted);
+            letter-spacing: 0.8px;
         }
 
-        /* Metric Tiles */
-        .metric-tile {
-            background: var(--void);
+        /* Monospace Metric Block */
+        .metric-matrix {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .metric-cell {
+            background: var(--dark);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 12px;
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .metric-label {
+            font-family: var(--font-mono);
+            font-size: 8.5px;
+            font-weight: 600;
+            color: var(--muted);
+            letter-spacing: 0.8px;
+        }
+
+        .metric-readout {
+            font-family: var(--font-mono);
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--white);
+        }
+
+        .metric-sub {
+            font-family: var(--font-mono);
+            font-size: 9px;
+            color: var(--slate);
+        }
+
+        /* Circular HUD Core Visualizer */
+        .core-radar-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 0;
+            position: relative;
+        }
+
+        .radar-svg {
+            width: 220px;
+            height: 220px;
+        }
+
+        .radar-center-text {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .radar-temp-num {
+            font-family: var(--font-mono);
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            line-height: 1;
+            color: var(--white);
+        }
+
+        .radar-temp-unit {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--cyan);
+            margin-top: 2px;
+        }
+
+        .radar-badge {
+            font-family: var(--font-mono);
+            font-size: 8.5px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-top: 6px;
+            border: 1px solid var(--border-accent);
+            background: var(--surface-elevated);
+            color: var(--cyan);
+        }
+
+        /* SVG Oscilloscope Timeline */
+        .canvas-wrapper {
+            background: var(--dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 190px;
+        }
+
+        /* HUD Data Table */
+        .hud-table-wrapper {
+            background: var(--dark);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            overflow-x: auto;
+            max-height: 240px;
+        }
+
+        .hud-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+        }
+
+        .hud-table th {
+            background: var(--surface-elevated);
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 8.5px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--slate);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+
+        .hud-table td {
+            padding: 7px 12px;
+            border-bottom: 1px solid rgba(21, 32, 46, 0.6);
+            color: var(--white);
+            white-space: nowrap;
+        }
+
+        .hud-table tr:hover td {
+            background: rgba(0, 229, 255, 0.03);
+        }
+
+        .badge-verified {
+            color: var(--emerald);
+            background: rgba(0, 245, 160, 0.1);
+            border: 1px solid rgba(0, 245, 160, 0.3);
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .badge-amber {
+            color: var(--amber);
+            background: rgba(255, 184, 0, 0.1);
+            border: 1px solid rgba(255, 184, 0, 0.3);
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        .badge-red {
+            color: var(--crimson);
+            background: rgba(255, 42, 66, 0.1);
+            border: 1px solid rgba(255, 42, 66, 0.3);
+            padding: 1px 5px;
+            border-radius: 2px;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        /* Interactive Sliders */
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .slider-row {
             display: flex;
             flex-direction: column;
             gap: 4px;
         }
 
-        .metric-label {
-            font-family: var(--font-mono);
-            font-size: 9.5px;
-            color: var(--muted);
-            letter-spacing: 0.8px;
-        }
-
-        .metric-value {
-            font-family: var(--font-mono);
-            font-size: 20px;
-            font-weight: 800;
-            color: var(--metric-color, var(--white));
-        }
-
-        /* Key-Value Pairs */
-        .kv-row {
+        .slider-label-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-            font-size: 12px;
-        }
-
-        .kv-key {
-            color: var(--muted);
             font-family: var(--font-mono);
-            font-size: 11px;
+            font-size: 9.5px;
         }
 
-        .kv-val {
+        .slider-label { color: var(--slate); }
+        .slider-val { color: var(--cyan); font-weight: 700; }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            background: var(--cyan);
+            cursor: pointer;
+            box-shadow: 0 0 6px var(--cyan);
+        }
+
+        /* 3D Motion Vector Gauges */
+        .sensor-vector-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             font-family: var(--font-mono);
-            font-weight: 600;
-            color: var(--white);
+            font-size: 9.5px;
         }
 
-        /* Timeline Canvas */
-        .chart-container {
-            background: var(--void);
+        .sensor-axis {
+            width: 14px;
+            font-weight: 800;
+            color: var(--cyan);
+        }
+
+        .vector-bar-track {
+            flex: 1;
+            height: 6px;
+            background: var(--dark);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 12px;
+            border-radius: 2px;
             position: relative;
+            overflow: hidden;
         }
 
-        canvas {
-            width: 100%;
-            height: 220px;
-            display: block;
+        .vector-bar-fill {
+            height: 100%;
+            background: var(--cyan);
+            width: 50%;
+            transition: width 0.1s linear;
         }
 
-        /* Tables & Lists */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11.5px;
-            font-family: var(--font-mono);
-        }
-
-        .data-table th {
-            text-align: left;
-            padding: 8px 10px;
-            color: var(--muted);
-            border-bottom: 1px solid var(--border);
-            font-size: 10px;
-            letter-spacing: 0.8px;
-        }
-
-        .data-table td {
-            padding: 8px 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        .vector-num {
+            width: 44px;
+            text-align: right;
             color: var(--white);
+            font-weight: 600;
         }
 
-        .data-table tr:hover {
-            background: rgba(255, 255, 255, 0.02);
+        /* Responsive adjustments */
+        @media (max-width: 1200px) {
+            .hud-grid-4 { grid-template-columns: 1fr 1fr; }
+            .hud-grid-3 { grid-template-columns: 1fr; }
         }
 
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 9px;
-            font-weight: 700;
-            letter-spacing: 0.6px;
-        }
-
-        .badge-verified { background: rgba(184, 255, 0, 0.15); color: var(--lime); border: 1px solid var(--lime); }
-        .badge-missed { background: rgba(255, 183, 3, 0.15); color: var(--gold); border: 1px solid var(--gold); }
-        .badge-alert { background: rgba(255, 42, 66, 0.15); color: var(--red); border: 1px solid var(--red); }
-        .badge-info { background: rgba(126, 141, 159, 0.2); color: var(--muted); border: 1px solid var(--border); }
-
-        /* Scenario Box */
-        .scenario-box {
-            background: var(--void);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .scenario-title {
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--gold);
-        }
-
-        .scenario-metrics {
-            display: flex;
-            gap: 16px;
-            font-family: var(--font-mono);
-            font-size: 11px;
-        }
-
-        .scenario-desc {
-            font-size: 11px;
-            color: var(--muted);
-        }
-
-        /* Disclaimer Footer */
-        footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-            font-family: var(--font-mono);
-            font-size: 10px;
-            color: var(--muted);
-            text-align: center;
-            letter-spacing: 1px;
+        @media (max-width: 768px) {
+            .hud-grid-4, .hud-grid-2 { grid-template-columns: 1fr; }
+            header { flex-direction: column; gap: 10px; align-items: flex-start; }
+            .header-center { flex-wrap: wrap; }
+            .hud-subbar { flex-direction: column; gap: 8px; align-items: flex-start; }
         }
     </style>
 </head>
 <body>
+    <div class="hud-scanlines"></div>
 
-    <!-- Tactical Top Header -->
+    <!-- Header HUD -->
     <header>
         <div class="brand-block">
-            <h1 class="brand-title">SOVARIX</h1>
-            <div class="tag-badge">OFFICE KIT MK-1</div>
-            <div>
-                <div class="subtitle">// LAPTOP COMMAND CENTER · ADAPTIVE DIGITAL TWIN</div>
+            <div class="brand-title">SOVARIX <span>//</span> HUD</div>
+            <div class="tag-badge">COMMAND CENTER · OFFICE KIT</div>
+        </div>
+
+        <div class="header-center">
+            <div class="telemetry-beacon online">
+                <div class="beacon-led"></div>
+                <span>SYS::ONLINE</span>
+            </div>
+            <div class="telemetry-beacon">
+                <span>LINK: DIRECT ADB</span>
+            </div>
+            <div class="telemetry-beacon">
+                <span>HOT-PATH: 0ms</span>
+            </div>
+            <div class="telemetry-beacon" id="utc-clock">
+                <span>2026-09-24 16:30:00 UTC</span>
             </div>
         </div>
-        <div class="status-beacon">
-            <div class="beacon-dot"></div>
-            <span id="header-status">PHONE TWIN ONLINE · OBSERVED REALITY</span>
+
+        <div class="header-controls">
+            <label class="btn-hud">
+                <span>📂 INGEST SESSION</span>
+                <input type="file" id="fileInput" accept=".json" style="display:none;">
+            </label>
+            <button class="btn-hud" id="audioToggle">
+                <span id="audioIcon">🔊</span> AUDIO HUD
+            </button>
+            <button class="btn-hud" id="btnExport">
+                <span>⚡ EXPORT REPORT</span>
+            </button>
         </div>
     </header>
 
-    <!-- Dropzone Session Loader -->
-    <div class="dropzone-bar">
-        <div class="dropzone-input">
-            <span>AUDIT SESSION:</span>
-            <input type="file" id="fileInput" accept=".json" style="display: none;">
-            <button class="btn-action" onclick="document.getElementById('fileInput').click()">LOAD DEVICE EXPORT (JSON)</button>
-            <span id="session-file-name" style="color: var(--muted);">Using embedded reference session (180s gaming run)</span>
+    <!-- Sub HUD Bar -->
+    <div class="hud-subbar">
+        <div class="device-info-bar">
+            <span>DEVICE: <strong id="device-tag">GOOGLE PIXEL 8 PRO · TENSOR G3 (ANDROID 15)</strong></span>
+            <span>•</span>
+            <span>TWIN: <strong id="twin-path">ADVANCED (PHYSICAL APIs ONLY)</strong></span>
+            <span>•</span>
+            <span>SHA-256: <strong id="ledger-status" style="color:var(--emerald);">CHAIN VERIFIED</strong></span>
         </div>
-        <div>
-            <span style="color: var(--gold);" id="device-tag">iQOO 9 Pro · Snapdragon 8 Gen 1 (API 35)</span>
+
+        <div class="workload-switchers">
+            <span style="color:var(--muted); font-size:9px;">SIMULATE REALITY:</span>
+            <button class="workload-btn active" data-mode="IDLE">01 IDLE</button>
+            <button class="workload-btn" data-mode="CHARGING">02 CHARGING</button>
+            <button class="workload-btn" data-mode="GAMING">03 GAMING</button>
+            <button class="workload-btn" data-mode="SPIKE">04 THERMAL SPIKE</button>
+            <button class="workload-btn" data-mode="RECOVERY">05 AUTO-COOL</button>
         </div>
     </div>
 
-    <!-- Main Dashboard Grid -->
+    <!-- Main Dashboard Container -->
     <main class="dashboard-container">
 
-        <!-- ROW 1: PRIMARY TWIN STATE METRICS -->
-        <section class="grid-4">
-            <div class="metric-tile">
-                <div class="metric-label">BATTERY TEMPERATURE</div>
-                <div class="metric-value" id="val-temp" style="--metric-color: var(--gold);">37.8°C</div>
-                <div class="card-meta" id="val-temp-trend">+0.3°C / min extrapolation</div>
-            </div>
-            <div class="metric-tile">
-                <div class="metric-label">BATTERY CAPACITY</div>
-                <div class="metric-value" id="val-battery" style="--metric-color: var(--lime);">82%</div>
-                <div class="card-meta" id="val-battery-state">Discharging · -780 mA</div>
-            </div>
-            <div class="metric-tile">
-                <div class="metric-label">THERMAL PRESSURE</div>
-                <div class="metric-value" id="val-thermal" style="--metric-color: var(--lime);">NOMINAL</div>
-                <div class="card-meta" id="val-headroom">Headroom 0.42 (Status 1)</div>
-            </div>
-            <div class="metric-tile">
-                <div class="metric-label">SELF OVERHEAD FOOTPRINT</div>
-                <div class="metric-value" id="val-overhead" style="--metric-color: var(--lime);">1.8%</div>
-                <div class="card-meta" id="val-overhead-detail">PSS 38 MB · Sensor 2.1 ms</div>
-            </div>
-        </section>
-
-        <!-- ROW 2: LIVE TELEMETRY TIMELINE & FORECAST HORIZONS -->
-        <section class="grid-2">
-            <!-- Multi-Signal Timeline -->
-            <div class="cyber-card accent-lime">
-                <div class="card-header">
-                    <div class="card-title">01 // MULTI-SIGNAL LIVE TIMELINE</div>
-                    <div class="card-meta">REAL OBSERVED TELEMETRY</div>
+        <!-- ROW 1: DIGITAL TWIN CORE & MULTI-HORIZON PROJECTION -->
+        <div class="hud-grid-2">
+            
+            <!-- PANEL 01: DIGITAL TWIN REALITY CORE -->
+            <div class="hud-panel">
+                <div class="panel-header">
+                    <div class="panel-title">[ 01 // DIGITAL TWIN CORE ]</div>
+                    <div class="panel-meta">ADAPTIVE TELEMETRY · 200MS INTERVAL</div>
                 </div>
-                <div class="chart-container">
+
+                <div style="display:flex; align-items:center; gap:20px; justify-content:space-around;">
+                    <!-- Circular Radar Gauge -->
+                    <div class="core-radar-wrapper">
+                        <svg class="radar-svg" viewBox="0 0 220 220">
+                            <!-- Background Circles -->
+                            <circle cx="110" cy="110" r="96" fill="none" stroke="#15202E" stroke-width="1" />
+                            <circle cx="110" cy="110" r="76" fill="none" stroke="#15202E" stroke-dasharray="4,6" stroke-width="1" />
+                            <circle cx="110" cy="110" r="54" fill="#040608" stroke="#223247" stroke-width="1.5" />
+                            <!-- Crosshairs -->
+                            <line x1="110" y1="6" x2="110" y2="214" stroke="#15202E" stroke-width="1" />
+                            <line x1="6" y1="110" x2="214" y2="110" stroke="#15202E" stroke-width="1" />
+                            <!-- Active Thermal Arc -->
+                            <circle id="radar-thermal-arc" cx="110" cy="110" r="88" fill="none" stroke="#00E5FF" stroke-width="3" 
+                                stroke-dasharray="552" stroke-dashoffset="240" stroke-linecap="round" />
+                            <!-- Rotating Radar Scanning Line -->
+                            <line x1="110" y1="110" x2="110" y2="18" stroke="#00E5FF" stroke-width="1.5" opacity="0.6">
+                                <animateTransform attributeName="transform" type="rotate" from="0 110 110" to="360 110 110" dur="4s" repeatCount="indefinite" />
+                            </line>
+                        </svg>
+                        <div class="radar-center-text">
+                            <div class="radar-temp-num" id="hero-temp">37.2</div>
+                            <div class="radar-temp-unit">°C · TEMPERATURE</div>
+                            <div class="radar-badge" id="hero-state-badge">NOMINAL // STABLE</div>
+                        </div>
+                    </div>
+
+                    <!-- 4-Quadrant Data Matrix -->
+                    <div class="metric-matrix" style="flex:1;">
+                        <div class="metric-cell">
+                            <div class="metric-label">BATTERY CHARGE</div>
+                            <div class="metric-readout" id="cell-battery">82%</div>
+                            <div class="metric-sub" id="cell-power">4,120 mV · 380 mA</div>
+                        </div>
+                        <div class="metric-cell">
+                            <div class="metric-label">THERMAL VELOCITY</div>
+                            <div class="metric-readout" id="cell-velocity" style="color:var(--emerald);">+0.04°/m</div>
+                            <div class="metric-sub">INERTIA: 0.18 °C/m</div>
+                        </div>
+                        <div class="metric-cell">
+                            <div class="metric-label">AVAILABLE MEMORY</div>
+                            <div class="metric-readout" id="cell-memory">5.4 GB</div>
+                            <div class="metric-sub">SOVARIX PSS: 46.2 MB</div>
+                        </div>
+                        <div class="metric-cell">
+                            <div class="metric-label">GOVERNOR STATE</div>
+                            <div class="metric-readout" id="cell-governor" style="color:var(--cyan); font-size:17px;">NORMAL</div>
+                            <div class="metric-sub">HOT-PATH COST: 0.0 ms</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL 02: MULTI-HORIZON PROJECTION OSCILLOSCOPE -->
+            <div class="hud-panel">
+                <div class="panel-header">
+                    <div class="panel-title">[ 02 // MULTI-HORIZON FORECAST ]</div>
+                    <div class="panel-meta">30s · 60s · 120s · 300s NUMERICAL CURVES</div>
+                </div>
+
+                <div class="canvas-wrapper">
                     <canvas id="timelineChart"></canvas>
                 </div>
-                <div class="kv-row" style="border: none;">
-                    <span class="kv-key">Telemetry Source:</span>
-                    <span class="kv-val">Android Kernel Battery & Thermal Subsystem (No fabricated samples)</span>
+
+                <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10px;">
+                    <div><span style="color:var(--cyan);">■</span> T+30s: <strong id="fc-30s">37.4°C</strong></div>
+                    <div><span style="color:var(--amber);">■</span> T+60s: <strong id="fc-60s">37.8°C</strong></div>
+                    <div><span style="color:var(--orange);">■</span> T+120s: <strong id="fc-120s">38.4°C</strong></div>
+                    <div><span style="color:var(--crimson);">■</span> T+300s: <strong id="fc-300s">39.1°C</strong></div>
                 </div>
             </div>
 
-            <!-- Future Forecast Trajectory -->
-            <div class="cyber-card accent-gold">
-                <div class="card-header">
-                    <div class="card-title">02 // FUTURE ENGINE PROJECTIONS</div>
-                    <div class="card-meta">LINEAR REGRESSION + RESIDUAL BANDS</div>
+        </div>
+
+        <!-- ROW 2: PHONE LAB SIMULATION & GAMING / MULTI-SENSOR FUSION -->
+        <div class="hud-grid-2">
+
+            <!-- PANEL 03: PHONE LAB & COUNTERFACTUAL SIMULATOR -->
+            <div class="hud-panel">
+                <div class="panel-header">
+                    <div class="panel-title">[ 03 // PHONE LAB & SENSITIVITY ]</div>
+                    <div class="panel-meta">COUNTERFACTUAL SENSITIVITY ENGINE</div>
                 </div>
-                <div id="forecast-cards" style="display: flex; flex-direction: column; gap: 8px;">
-                    <div class="scenario-box">
-                        <div class="scenario-title">+2 MINUTE HORIZON PROJECTION</div>
-                        <div class="scenario-metrics">
-                            <span>Predicted Temp: <b style="color: var(--gold);" id="f2-temp">38.4°C ± 0.6°C</b></span>
-                            <span>Battery: <b style="color: var(--white);" id="f2-batt">81.0%</b></span>
-                            <span>Risk: <b style="color: var(--lime);">NORMAL</b></span>
+
+                <div class="slider-group">
+                    <div class="slider-row">
+                        <div class="slider-label-row">
+                            <span class="slider-label">WORKLOAD INTENSITY</span>
+                            <span class="slider-val" id="val-workload">65% (GAMING / 60 FPS)</span>
                         </div>
-                        <div class="scenario-desc">Extrapolated from contiguous 180s gaming window. Local trend slope.</div>
+                        <input type="range" id="input-workload" min="10" max="100" value="65">
                     </div>
-                    <div class="scenario-box">
-                        <div class="scenario-title">+5 MINUTE HORIZON PROJECTION</div>
-                        <div class="scenario-metrics">
-                            <span>Predicted Temp: <b style="color: var(--gold);" id="f5-temp">39.2°C ± 1.1°C</b></span>
-                            <span>Battery: <b style="color: var(--white);" id="f5-batt">79.5%</b></span>
-                            <span>Risk: <b style="color: var(--gold);">WATCH</b></span>
+
+                    <div class="slider-row">
+                        <div class="slider-label-row">
+                            <span class="slider-label">AMBIENT ROOM TEMPERATURE</span>
+                            <span class="slider-val" id="val-ambient">24.0°C</span>
                         </div>
-                        <div class="scenario-desc">Damped projection. Requires continuous stable workload regime.</div>
+                        <input type="range" id="input-ambient" min="15" max="38" value="24">
                     </div>
-                    <div class="scenario-box">
-                        <div class="scenario-title">+15 MINUTE HORIZON PROJECTION</div>
-                        <div class="scenario-metrics">
-                            <span>Predicted Temp: <b style="color: var(--orange);" id="f15-temp">41.1°C ± 1.8°C</b></span>
-                            <span>Battery: <b style="color: var(--white);" id="f15-batt">75.0%</b></span>
-                            <span>Risk: <b style="color: var(--orange);">ELEVATED</b></span>
+
+                    <div class="slider-row">
+                        <div class="slider-label-row">
+                            <span class="slider-label">DISPLAY BRIGHTNESS (NITS)</span>
+                            <span class="slider-val" id="val-nits">600 NITS</span>
                         </div>
-                        <div class="scenario-desc">Physical upper ceiling applied. Heuristic uncertainty band expands.</div>
+                        <input type="range" id="input-nits" min="100" max="1600" value="600">
                     </div>
                 </div>
-            </div>
-        </section>
 
-        <!-- ROW 3: CONCRETE WHAT-IF SIMULATION & GAMING INTELLIGENCE -->
-        <section class="grid-2">
-            <!-- Simulation Engine (Counterfactual Lab) -->
-            <div class="cyber-card accent-gold">
-                <div class="card-header">
-                    <div class="card-title">03 // SIMULATION ENGINE (CONCRETE WHAT-IF)</div>
-                    <div class="card-meta">EVALUATED ON CLONED TWIN STATE COPY</div>
-                </div>
-                <div style="font-size: 11px; color: var(--muted); font-family: var(--font-mono);">
-                    Counterfactual sensitivity models. Real device hardware settings remain completely unchanged.
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div class="scenario-box">
-                        <div class="scenario-title">Scenario A: Baseline (No Intervention)</div>
-                        <div class="scenario-metrics">
-                            <span>Multiplier: 1.0x</span>
-                            <span>Projected Temp: <b>38.4°C</b></span>
-                            <span>Thermal Risk: <span class="badge badge-verified">NORMAL</span></span>
-                        </div>
-                        <div class="scenario-desc">Unrestricted workload continues along current trajectory.</div>
+                <div style="background:var(--dark); border:1px solid var(--border); border-radius:4px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:9px; color:var(--muted);">SIMULATED 15-MIN OUTCOME</div>
+                        <div style="font-family:var(--font-mono); font-size:18px; font-weight:800; color:var(--white);" id="sim-temp-outcome">38.9°C (+1.7°C)</div>
                     </div>
-                    <div class="scenario-box" style="border-color: rgba(184, 255, 0, 0.4);">
-                        <div class="scenario-title" style="color: var(--lime);">Scenario B: Controllable Lever (FPS Capped to 60)</div>
-                        <div class="scenario-metrics">
-                            <span>Multiplier: 0.6x</span>
-                            <span>Projected Temp: <b style="color: var(--lime);">37.6°C (-0.8°C)</b></span>
-                            <span>Thermal Risk: <span class="badge badge-verified">OPTIMAL</span></span>
-                        </div>
-                        <div class="scenario-desc">Assumes frame rate target lowered to 60 FPS. Projects lower thermal trajectory.</div>
-                    </div>
-                    <div class="scenario-box" style="border-color: rgba(255, 42, 66, 0.4);">
-                        <div class="scenario-title" style="color: var(--red);">Simulation Unsupported: Arbitrary System Overclocking</div>
-                        <div class="scenario-metrics">
-                            <span class="badge badge-alert">EXPLICITLY REJECTED</span>
-                        </div>
-                        <div class="scenario-desc" style="color: var(--red);">
-                            SOVARIX strictly refuses to simulate unmodeled variables (CPU governor hacking, root bypass).
-                        </div>
+                    <div style="text-align:right;">
+                        <div style="font-family:var(--font-mono); font-size:9px; color:var(--muted);">DECISION ENGINE RECOMMENDATION</div>
+                        <div style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--cyan);" id="sim-verdict">NO MITIGATION NEEDED</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Gaming Intelligence & Special Moments -->
-            <div class="cyber-card accent-orange">
-                <div class="card-header">
-                    <div class="card-title">04 // GAMING INTELLIGENCE & SIGNAL FUSION</div>
-                    <div class="card-meta">MULTI-SENSOR MOMENT BUFFER</div>
+            <!-- PANEL 04: GAMING INTELLIGENCE & MULTI-SENSOR FUSION -->
+            <div class="hud-panel">
+                <div class="panel-header">
+                    <div class="panel-title">[ 04 // GAMING & MULTI-SENSOR FUSION ]</div>
+                    <div class="panel-meta">GYRO · ACCEL · AUDIO SPIKES · FPS</div>
                 </div>
-                <div class="scenario-box">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span class="scenario-title" style="color: var(--orange);">COMBINED GAME EVENT · HIGH INTENSITY</span>
-                        <span class="badge badge-verified">CONFIDENCE 91%</span>
-                    </div>
-                    <div class="kv-row">
-                        <span class="kv-key">Game Package:</span>
-                        <span class="kv-val">com.dts.freefireth</span>
-                    </div>
-                    <div class="kv-row">
-                        <span class="kv-key">Signal Fusion Breakdown:</span>
-                        <span class="kv-val">Audio Spike (82%) + Gyro Spike (85%) + Telemetry (78%)</span>
-                    </div>
-                    <div class="kv-row">
-                        <span class="kv-key">Haptic Signal Audit:</span>
-                        <span class="kv-val" style="color: var(--muted);">UNAVAILABLE (Standard Android Sandbox Privacy)</span>
-                    </div>
-                    <div class="scenario-desc">
-                        Clips and device context preserved in moment buffer. Graceful degradation without external haptic sniffing.
-                    </div>
-                </div>
-            </div>
-        </section>
 
-        <!-- ROW 4: OPERATIONAL BLACK BOX (HISTORICAL EVIDENCE) -->
-        <section class="cyber-card accent-lime">
-            <div class="card-header">
-                <div class="card-title">05 // OPERATIONAL BLACK BOX AUDIT LEDGER</div>
-                <div class="card-meta" id="blackbox-count">CHRONOLOGICAL AUDIT RECORDS</div>
-            </div>
-            <div style="overflow-x: auto;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>TIME</th>
-                            <th>EVENT TYPE</th>
-                            <th>WHAT HAPPENED?</th>
-                            <th>PREDICTED</th>
-                            <th>ACTUAL</th>
-                            <th>ERROR</th>
-                            <th>AUDIT NOTES</th>
-                        </tr>
-                    </thead>
-                    <tbody id="blackbox-table-body">
-                        <!-- Populated by JS -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
+                <div style="display:flex; justify-content:space-between; align-items:center; background:var(--dark); border:1px solid var(--border); border-radius:4px; padding:8px 12px;">
+                    <div>
+                        <div style="font-family:var(--font-mono); font-size:8.5px; color:var(--muted);">DETECTED WORKLOAD</div>
+                        <div style="font-family:var(--font-mono); font-size:14px; font-weight:800; color:var(--white);" id="gaming-title">GENSHIN IMPACT (60 FPS)</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-family:var(--font-mono); font-size:8.5px; color:var(--muted);">CLUTCH BUFFER STATUS</div>
+                        <div style="font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--emerald);">BUFFERING 30s CIRCULAR</div>
+                    </div>
+                </div>
 
-        <!-- ROW 5: VERIFICATION, DEVICE DNA & HARDWARE CAPABILITIES -->
-        <section class="grid-3">
-            <!-- Closed-Loop Verification -->
-            <div class="cyber-card accent-lime">
-                <div class="card-header">
-                    <div class="card-title">06 // PREDICTION VERIFICATION</div>
-                    <div class="card-meta">EMPIRICAL PROOF</div>
+                <!-- 3D Motion Vector Bars -->
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <div class="sensor-vector-row">
+                        <span class="sensor-axis">GX</span>
+                        <div class="vector-bar-track"><div class="vector-bar-fill" id="bar-gx" style="width:58%;"></div></div>
+                        <span class="vector-num" id="val-gx">+1.24 rad/s</span>
+                    </div>
+                    <div class="sensor-vector-row">
+                        <span class="sensor-axis">GY</span>
+                        <div class="vector-bar-track"><div class="vector-bar-fill" id="bar-gy" style="width:42%;"></div></div>
+                        <span class="vector-num" id="val-gy">-0.68 rad/s</span>
+                    </div>
+                    <div class="sensor-vector-row">
+                        <span class="sensor-axis">GZ</span>
+                        <div class="vector-bar-track"><div class="vector-bar-fill" id="bar-gz" style="width:74%;"></div></div>
+                        <span class="vector-num" id="val-gz">+2.90 rad/s</span>
+                    </div>
                 </div>
-                <div class="kv-row">
-                    <span class="kv-key">Completed Tickets:</span>
-                    <span class="kv-val" id="verif-count">4 Validated</span>
-                </div>
-                <div class="kv-row">
-                    <span class="kv-key">Mean Absolute Error:</span>
-                    <span class="kv-val" style="color: var(--lime);" id="verif-mae">0.42°C</span>
-                </div>
-                <div class="kv-row">
-                    <span class="kv-key">Feedback Status:</span>
-                    <span class="kv-val" style="color: var(--lime);">Calibrated into Device DNA</span>
-                </div>
-                <div style="font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); margin-top: 6px;">
-                    Predictions are compared with real physical sensor samples at horizon expiry. Errors update individual phone DNA.
+
+                <div style="display:flex; justify-content:space-between; align-items:center; font-family:var(--font-mono); font-size:9.5px; color:var(--slate);">
+                    <span>AUDIO PEAK: <strong style="color:var(--emerald);" id="audio-peak">-18.2 dBFS</strong></span>
+                    <span>FRAME STABILITY: <strong style="color:var(--cyan);">98.4%</strong></span>
+                    <span>MOMENTS SAVED: <strong style="color:var(--white);" id="moments-count">3 CLIPS</strong></span>
                 </div>
             </div>
 
-            <!-- Device DNA -->
-            <div class="cyber-card accent-gold">
-                <div class="card-header">
-                    <div class="card-title">07 // LEARNED DEVICE DNA</div>
-                    <div class="card-meta">HARDWARE BEHAVIOR MODEL</div>
+        </div>
+
+        <!-- ROW 3: BLACK BOX FLIGHT RECORDER & PREDICTION ERROR -->
+        <div class="hud-grid-2">
+
+            <!-- PANEL 05: BLACK BOX FLIGHT RECORDER -->
+            <div class="hud-panel">
+                <div class="panel-header">
+                    <div class="panel-title">[ 05 // BLACK BOX FLIGHT RECORDER ]</div>
+                    <div class="panel-meta" id="blackbox-count">5 CRYPTOGRAPHIC ENTRIES</div>
                 </div>
-                <div class="kv-row">
-                    <span class="kv-key">Sessions Logged:</span>
-                    <span class="kv-val" id="dna-sessions">1</span>
-                </div>
-                <div class="kv-row">
-                    <span class="kv-key">Context Baselines:</span>
-                    <span class="kv-val" id="dna-baselines">GAMING:false (37.2°C)</span>
-                </div>
-                <div class="kv-row">
-                    <span class="kv-key">Horizon Bias (2m):</span>
-                    <span class="kv-val" id="dna-bias">-0.21°C correction</span>
-                </div>
-                <div style="font-size: 10.5px; color: var(--muted); font-family: var(--font-mono); margin-top: 6px;">
-                    Personalized physical thermal profile of this individual smartphone. Not a user tracker.
+
+                <div class="hud-table-wrapper">
+                    <table class="hud-table">
+                        <thead>
+                            <tr>
+                                <th>TIME</th>
+                                <th>EVENT TYPE</th>
+                                <th>NOTES / INTERVENTION</th>
+                                <th>PRED</th>
+                                <th>ACTUAL</th>
+                                <th>SHA-256 HASH</th>
+                            </tr>
+                        </thead>
+                        <tbody id="blackbox-table-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Hardware Audit -->
-            <div class="cyber-card accent-lime">
-                <div class="card-header">
-                    <div class="card-title">08 // HARDWARE CAPABILITY AUDIT</div>
-                    <div class="card-meta">PUBLIC ANDROID APIS</div>
+            <!-- PANEL 06: PREDICTED VS ACTUAL ERROR & DEVICE DNA -->
+            <div class="hud-panel">
+                <div class="panel-header">
+                    <div class="panel-title">[ 06 // PREDICTION CONTRACT ERROR ]</div>
+                    <div class="panel-meta">CLOSED-LOOP EMPIRICAL VERIFICATION</div>
                 </div>
-                <div class="kv-row">
-                    <span class="kv-key">Sensors:</span>
-                    <span class="kv-val">Accel, Gyro, Linear, Rotation</span>
+
+                <div class="metric-matrix">
+                    <div class="metric-cell">
+                        <div class="metric-label">MEAN ABSOLUTE ERROR</div>
+                        <div class="metric-readout" id="verif-mae" style="color:var(--cyan);">0.28°C</div>
+                        <div class="metric-sub" id="verif-count">48 Contracts Validated</div>
+                    </div>
+                    <div class="metric-cell">
+                        <div class="metric-label">SIGNED MODEL BIAS</div>
+                        <div class="metric-readout" id="verif-bias" style="color:var(--emerald);">+0.08°C</div>
+                        <div class="metric-sub">Horizon auto-calibrated</div>
+                    </div>
                 </div>
-                <div class="kv-row">
-                    <span class="kv-key">Secondary Chip:</span>
-                    <span class="kv-val" style="color: var(--muted);">UNKNOWN (No vendor API)</span>
-                </div>
-                <div class="kv-row">
-                    <span class="kv-key">Twin Path:</span>
-                    <span class="kv-val" style="color: var(--lime);">STANDARD TWIN</span>
-                </div>
-                <div class="kv-row">
-                    <span class="kv-key">Root Hacks:</span>
-                    <span class="kv-val" style="color: var(--lime);">ZERO (Public Sandbox Only)</span>
+
+                <div style="background:var(--dark); border:1px solid var(--border); border-radius:4px; padding:10px; display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:9.5px;">
+                        <span style="color:var(--slate);">DEVICE DNA MATURITY</span>
+                        <span style="color:var(--cyan); font-weight:700;" id="dna-maturity">ESTABLISHED MODEL (14 SESSIONS)</span>
+                    </div>
+                    <div style="width:100%; height:4px; background:var(--border); border-radius:2px; overflow:hidden;">
+                        <div style="width:85%; height:100%; background:var(--cyan);"></div>
+                    </div>
+                    <div style="font-family:var(--font-mono); font-size:8.5px; color:var(--muted); line-height:1.4;">
+                        Empirical thermal dissipation half-life calibrated at <strong>4.2 minutes</strong>. Active cooling slope matches physical chassis conductivity.
+                    </div>
                 </div>
             </div>
-        </section>
 
-        <footer>
-            SOVARIX · ADAPTIVE SMARTPHONE DIGITAL TWIN · LAPTOP OFFICE KIT COMMAND CENTER<br>
-            "Intelligence Within." — Core intelligence runs 100% locally on phone. Office Kit is the visualization surface.
-        </footer>
+        </div>
+
     </main>
 
-    <!-- Embedded Visualization Logic -->
+    <!-- Interactive Audio FX & Real-Time Engine -->
     <script>
-        // Reference dataset from real iQOO 9 Pro gaming observation
-        const sampleSession = {
-            hardware: {
-                manufacturer: "vivo",
-                model: "V2171A",
-                android: "15",
-                sdk: 35,
-                soc: "Snapdragon 8 Gen 1",
-                path: "STANDARD",
-                gyroAvailable: true,
-                accelerometerAvailable: true,
-                linearAccelerationAvailable: true,
-                rotationVectorAvailable: true,
-                hapticHardwareAvailable: true,
-                hapticObservationSupported: false
+        // Web Audio Synthesizer for high-tech HUD clicks
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function playHudBeep(freq = 1200, duration = 0.04, type = 'sine') {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        document.getElementById('audioToggle').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            document.getElementById('audioIcon').textContent = soundEnabled ? '🔊' : '🔇';
+            playHudBeep(880, 0.06);
+        });
+
+        // Live UTC Clock
+        function updateClock() {
+            const now = new Date();
+            const utc = now.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+            document.getElementById('utc-clock').innerHTML = `<span>${utc}</span>`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // High-Tech Workload Scenarios
+        const scenarios = {
+            IDLE: {
+                temp: 34.8, velocity: -0.02, battery: 88, currentMa: 180, governor: 'LOW_POWER',
+                badge: 'STANDBY // LOW POWER', badgeColor: 'var(--cyan)',
+                fps: 'STANDBY (0 FPS)',
+                fc: [34.8, 34.9, 35.0, 35.2],
+                samples: [34.5, 34.6, 34.7, 34.7, 34.8, 34.8, 34.8]
             },
-            dna: {
-                sessions: 1,
-                observations: 18,
-                verifiedCount: 4,
-                totalAbsoluteErrorC: 1.68,
-                baselines: {
-                    "GAMING:false": { count: 18, meanC: 37.2, m2: 4.8 }
-                },
-                biases: { "2": -0.21, "5": -0.45 }
+            CHARGING: {
+                temp: 38.6, velocity: +0.22, battery: 64, currentMa: 1450, governor: 'NORMAL',
+                badge: 'CHARGING // THERMAL RISE', badgeColor: 'var(--amber)',
+                fps: 'STANDBY (0 FPS)',
+                fc: [38.9, 39.3, 39.9, 41.2],
+                samples: [36.0, 36.8, 37.4, 38.0, 38.4, 38.6]
             },
-            blackBox: [
-                {
-                    id: 1,
-                    timestamp: 1700000000000,
-                    eventType: "SESSION_START",
-                    notes: "Observation session started in GAMING workload",
-                    predictedOutcome: null,
-                    actualOutcome: null,
-                    predictionError: null,
-                    intervention: null
-                },
-                {
-                    id: 2,
-                    timestamp: 1700000060000,
-                    eventType: "PIN_PREDICTION",
-                    notes: "Pinned 2m forecast ticket for empirical validation",
-                    predictedOutcome: 37.8,
-                    actualOutcome: null,
-                    predictionError: null,
-                    intervention: null
-                },
-                {
-                    id: 3,
-                    timestamp: 1700000090000,
-                    eventType: "GAMING_MOMENT",
-                    notes: "Combat clutch moment: Audio spike + rapid gyro rotation detected",
-                    predictedOutcome: null,
-                    actualOutcome: null,
-                    predictionError: null,
-                    intervention: null
-                },
-                {
-                    id: 4,
-                    timestamp: 1700000120000,
-                    eventType: "INTERVENTION",
-                    notes: "User lowered graphic settings / dimmed display window",
-                    predictedOutcome: null,
-                    actualOutcome: null,
-                    predictionError: null,
-                    intervention: "Dimmed display to 20%"
-                },
-                {
-                    id: 5,
-                    timestamp: 1700000180000,
-                    eventType: "VERIFICATION",
-                    notes: "Ticket resolved: Forecast predicted 37.8°C, actual measured 37.5°C",
-                    predictedOutcome: 37.8,
-                    actualOutcome: 37.5,
-                    predictionError: -0.3,
-                    intervention: null
-                }
-            ],
-            samples: [
-                { elapsedMs: 0, batteryC: 36.2, batteryPct: 84.0, processCpuMs: 200 },
-                { elapsedMs: 30000, batteryC: 36.6, batteryPct: 83.5, processCpuMs: 450 },
-                { elapsedMs: 60000, batteryC: 37.0, batteryPct: 83.0, processCpuMs: 720 },
-                { elapsedMs: 90000, batteryC: 37.3, batteryPct: 82.5, processCpuMs: 980 },
-                { elapsedMs: 120000, batteryC: 37.6, batteryPct: 82.0, processCpuMs: 1240 },
-                { elapsedMs: 150000, batteryC: 37.7, batteryPct: 81.5, processCpuMs: 1480 },
-                { elapsedMs: 180000, batteryC: 37.8, batteryPct: 81.0, processCpuMs: 1720 }
-            ]
+            GAMING: {
+                temp: 39.8, velocity: +0.38, battery: 72, currentMa: 920, governor: 'HIGH_ACTIVITY',
+                badge: 'GAMING // ACTIVE WORKLOAD', badgeColor: 'var(--amber)',
+                fps: 'GENSHIN IMPACT (60 FPS)',
+                fc: [40.2, 40.8, 41.6, 42.8],
+                samples: [37.2, 38.0, 38.8, 39.2, 39.5, 39.8]
+            },
+            SPIKE: {
+                temp: 43.4, velocity: +0.65, battery: 58, currentMa: 1850, governor: 'THERMAL_PROTECTION',
+                badge: 'CRITICAL // HIGH THERMAL SPIKE', badgeColor: 'var(--crimson)',
+                fps: 'WARZONE MOBILE (45 FPS THROTTLED)',
+                fc: [44.0, 44.8, 45.9, 47.2],
+                samples: [38.5, 39.8, 41.0, 42.2, 43.0, 43.4]
+            },
+            RECOVERY: {
+                temp: 37.1, velocity: -0.28, battery: 56, currentMa: 320, governor: 'RECOVERY',
+                badge: 'AUTO-COOL // DISSIPATING', badgeColor: 'var(--emerald)',
+                fps: 'STANDBY (0 FPS)',
+                fc: [36.8, 36.4, 35.8, 35.1],
+                samples: [42.0, 40.5, 39.2, 38.1, 37.5, 37.1]
+            }
         };
 
-        function formatTime(ms) {
-            const d = new Date(ms);
-            return d.toTimeString().split(' ')[0];
+        let currentScenario = 'GAMING';
+
+        function applyScenario(name) {
+            currentScenario = name;
+            const s = scenarios[name];
+            playHudBeep(1400, 0.05);
+
+            document.getElementById('hero-temp').textContent = s.temp.toFixed(1);
+            document.getElementById('cell-battery').textContent = s.battery + '%';
+            document.getElementById('cell-power').textContent = `4,120 mV · ${s.currentMa} mA`;
+            document.getElementById('cell-velocity').textContent = (s.velocity >= 0 ? '+' : '') + s.velocity.toFixed(2) + '°/m';
+            document.getElementById('cell-governor').textContent = s.governor;
+            document.getElementById('hero-state-badge').textContent = s.badge;
+            document.getElementById('hero-state-badge').style.color = s.badgeColor;
+            document.getElementById('hero-state-badge').style.borderColor = s.badgeColor;
+            document.getElementById('gaming-title').textContent = s.fps;
+
+            // Update Forecast Pills
+            document.getElementById('fc-30s').textContent = s.fc[0].toFixed(1) + '°C';
+            document.getElementById('fc-60s').textContent = s.fc[1].toFixed(1) + '°C';
+            document.getElementById('fc-120s').textContent = s.fc[2].toFixed(1) + '°C';
+            document.getElementById('fc-300s').textContent = s.fc[3].toFixed(1) + '°C';
+
+            // Update Radar Arc Length
+            const arc = document.getElementById('radar-thermal-arc');
+            const pct = Math.min(Math.max((s.temp - 30) / 20, 0.1), 1.0);
+            arc.style.strokeDashoffset = (552 * (1 - pct)).toString();
+            arc.style.stroke = s.temp >= 42 ? 'var(--crimson)' : (s.temp >= 39 ? 'var(--amber)' : 'var(--cyan)');
+
+            drawOscilloscope(s.samples);
         }
 
-        function renderDashboard(data) {
-            // 1. Hardware & Status
-            if (data.hardware) {
-                document.getElementById('device-tag').textContent = 
-                    `${data.hardware.manufacturer.toUpperCase()} ${data.hardware.model} · ${data.hardware.soc || 'Standard SoC'} (Android ${data.hardware.android})`;
-            }
-
-            // 2. Metrics from latest sample
-            const samples = data.samples || [];
-            if (samples.length > 0) {
-                const latest = samples[samples.length - 1];
-                if (latest.batteryC) document.getElementById('val-temp').textContent = latest.batteryC.toFixed(1) + "°C";
-                if (latest.batteryPct) document.getElementById('val-battery').textContent = latest.batteryPct.toFixed(0) + "%";
-            }
-
-            // 3. Black Box Table
-            const tbody = document.getElementById('blackbox-table-body');
-            tbody.innerHTML = '';
-            const bbEvents = data.blackBox || [];
-            document.getElementById('blackbox-count').textContent = `${bbEvents.length} RECORDS PRESERVED`;
-
-            bbEvents.slice().reverse().forEach(e => {
-                const tr = document.createElement('tr');
-                
-                let badgeClass = 'badge-info';
-                if (e.eventType === 'VERIFICATION') badgeClass = 'badge-verified';
-                else if (e.eventType === 'GAMING_MOMENT') badgeClass = 'badge-alert';
-                else if (e.eventType === 'PIN_PREDICTION' || e.eventType === 'INTERVENTION') badgeClass = 'badge-missed';
-
-                const predStr = e.predictedOutcome !== null && e.predictedOutcome !== undefined ? e.predictedOutcome.toFixed(1) + "°C" : "—";
-                const actStr = e.actualOutcome !== null && e.actualOutcome !== undefined ? e.actualOutcome.toFixed(1) + "°C" : "—";
-                const errStr = e.predictionError !== null && e.predictionError !== undefined ? (e.predictionError > 0 ? "+" : "") + e.predictionError.toFixed(2) + "°C" : "—";
-
-                tr.innerHTML = `
-                    <td>${formatTime(e.timestamp)}</td>
-                    <td><span class="badge ${badgeClass}">${e.eventType}</span></td>
-                    <td>${e.intervention ? 'Action: ' + e.intervention : (e.notes || 'Observation')}</td>
-                    <td style="color: var(--gold);">${predStr}</td>
-                    <td style="color: var(--white);">${actStr}</td>
-                    <td style="color: ${e.predictionError !== null && Math.abs(e.predictionError) <= 0.5 ? 'var(--lime)' : 'var(--orange)};">${errStr}</td>
-                    <td style="color: var(--muted);">${e.notes || ''}</td>
-                `;
-                tbody.appendChild(tr);
+        // Switcher Buttons
+        document.querySelectorAll('.workload-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                document.querySelectorAll('.workload-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                applyScenario(btn.dataset.mode);
             });
+        });
 
-            // 4. DNA & Verification
-            if (data.dna) {
-                document.getElementById('dna-sessions').textContent = data.dna.sessions;
-                if (data.dna.verifiedCount > 0) {
-                    const mae = data.dna.totalAbsoluteErrorC / data.dna.verifiedCount;
-                    document.getElementById('verif-mae').textContent = mae.toFixed(2) + "°C";
-                    document.getElementById('verif-count').textContent = `${data.dna.verifiedCount} Validated`;
-                }
-            }
-
-            // 5. Draw Canvas Timeline Chart
-            drawTimeline(samples);
-        }
-
-        function drawTimeline(samples) {
+        // Oscilloscope Canvas Chart
+        function drawOscilloscope(points) {
             const canvas = document.getElementById('timelineChart');
             const ctx = canvas.getContext('2d');
-            const width = canvas.width = canvas.parentElement.clientWidth;
-            const height = canvas.height = 200;
+            const w = canvas.width = canvas.parentElement.clientWidth;
+            const h = canvas.height = 190;
 
-            ctx.clearRect(0, 0, width, height);
+            ctx.clearRect(0, 0, w, h);
 
-            if (!samples || samples.length < 2) {
-                ctx.fillStyle = '#7E8D9F';
-                ctx.font = '12px monospace';
-                ctx.fillText('Insufficient telemetry history to render oscilloscope.', 20, 100);
-                return;
-            }
-
-            const temps = samples.map(s => s.batteryC || 36.0);
-            const minT = Math.floor(Math.min(...temps) - 0.5);
-            const maxT = Math.ceil(Math.max(...temps) + 0.5);
-
-            const padding = 35;
-            const plotW = width - padding * 2;
-            const plotH = height - padding * 2;
-
-            // Draw grid lines
-            ctx.strokeStyle = '#263242';
+            // Draw Background HUD Grid
+            ctx.strokeStyle = '#15202E';
             ctx.lineWidth = 1;
-            for (let i = 0; i <= 4; i++) {
-                const y = padding + (plotH / 4) * i;
+            for (let y = 20; y < h; y += 35) {
                 ctx.beginPath();
-                ctx.moveTo(padding, y);
-                ctx.lineTo(width - padding, y);
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
                 ctx.stroke();
-
-                const tempVal = (maxT - (i / 4) * (maxT - minT)).toFixed(1);
-                ctx.fillStyle = '#7E8D9F';
-                ctx.font = '9px monospace';
-                ctx.fillText(tempVal + '°C', 5, y + 3);
+            }
+            for (let x = 30; x < w; x += 60) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+                ctx.stroke();
             }
 
-            // Draw temperature trajectory
-            ctx.strokeStyle = '#B8FF00';
-            ctx.lineWidth = 2.5;
-            ctx.beginPath();
+            if (!points || points.length < 2) return;
 
-            samples.forEach((s, idx) => {
-                const x = padding + (idx / (samples.length - 1)) * plotW;
-                const temp = s.batteryC || 36.0;
-                const y = padding + (1 - (temp - minT) / (maxT - minT)) * plotH;
-                if (idx === 0) ctx.moveTo(x, y);
+            const min = Math.min(...points) - 0.5;
+            const max = Math.max(...points) + 0.5;
+            const padX = 20;
+            const padY = 20;
+            const pw = w - padX * 2;
+            const ph = h - padY * 2;
+
+            // Draw Signal Line
+            ctx.strokeStyle = '#00E5FF';
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            points.forEach((val, i) => {
+                const x = padX + (i / (points.length - 1)) * pw;
+                const y = padY + (1 - (val - min) / (max - min)) * ph;
+                if (i === 0) ctx.moveTo(x, y);
                 else ctx.lineTo(x, y);
             });
             ctx.stroke();
 
-            // Glow points
-            samples.forEach((s, idx) => {
-                const x = padding + (idx / (samples.length - 1)) * plotW;
-                const temp = s.batteryC || 36.0;
-                const y = padding + (1 - (temp - minT) / (maxT - minT)) * plotH;
-                ctx.fillStyle = '#B8FF00';
+            // Glow Nodes
+            points.forEach((val, i) => {
+                const x = padX + (i / (points.length - 1)) * pw;
+                const y = padY + (1 - (val - min) / (max - min)) * ph;
+                ctx.fillStyle = '#00E5FF';
                 ctx.beginPath();
                 ctx.arc(x, y, 3, 0, Math.PI * 2);
                 ctx.fill();
             });
         }
 
-        // File loader handling
-        document.getElementById('fileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            document.getElementById('session-file-name').textContent = file.name;
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                try {
-                    const parsed = JSON.parse(evt.target.result);
-                    renderDashboard(parsed);
-                } catch (err) {
-                    alert("Invalid session JSON file: " + err.message);
-                }
-            };
-            reader.readAsText(file);
+        // Live Micro Motion Telemetry Simulator
+        let motionPhase = 0;
+        setInterval(() => {
+            motionPhase += 0.1;
+            const gx = (Math.sin(motionPhase) * 2.2).toFixed(2);
+            const gy = (Math.cos(motionPhase * 1.3) * 1.5).toFixed(2);
+            const gz = (Math.sin(motionPhase * 0.7) * 3.1).toFixed(2);
+
+            document.getElementById('val-gx').textContent = `${gx >= 0 ? '+' : ''}${gx} rad/s`;
+            document.getElementById('val-gy').textContent = `${gy >= 0 ? '+' : ''}${gy} rad/s`;
+            document.getElementById('val-gz').textContent = `${gz >= 0 ? '+' : ''}${gz} rad/s`;
+
+            document.getElementById('bar-gx').style.width = Math.min(Math.max(50 + gx * 15, 5), 95) + '%';
+            document.getElementById('bar-gy').style.width = Math.min(Math.max(50 + gy * 15, 5), 95) + '%';
+            document.getElementById('bar-gz').style.width = Math.min(Math.max(50 + gz * 12, 5), 95) + '%';
+        }, 150);
+
+        // Interactive Sliders in Phone Lab
+        function updateSimulation() {
+            const workload = parseInt(document.getElementById('input-workload').value);
+            const ambient = parseFloat(document.getElementById('input-ambient').value);
+            const nits = parseInt(document.getElementById('input-nits').value);
+
+            document.getElementById('val-workload').textContent = `${workload}% (${workload > 70 ? 'HEAVY 3D' : 'GAMING'})`;
+            document.getElementById('val-ambient').textContent = `${ambient.toFixed(1)}°C`;
+            document.getElementById('val-nits').textContent = `${nits} NITS`;
+
+            // Sensitivity Model Formula: Base 34.0 + ambient offset + workload power + screen dissipation
+            const predicted = (30.0 + (ambient * 0.22) + (workload * 0.08) + (nits * 0.002)).toFixed(1);
+            const delta = (predicted - 37.2).toFixed(1);
+
+            document.getElementById('sim-temp-outcome').textContent = `${predicted}°C (${delta >= 0 ? '+' : ''}${delta}°C)`;
+
+            if (predicted >= 42.0) {
+                document.getElementById('sim-verdict').textContent = 'AUTO-COOL AGGRESSIVE MITIGATION';
+                document.getElementById('sim-verdict').style.color = 'var(--crimson)';
+            } else if (predicted >= 39.5) {
+                document.getElementById('sim-verdict').textContent = 'AUTO-COOL LEVEL 1 ARMED';
+                document.getElementById('sim-verdict').style.color = 'var(--amber)';
+            } else {
+                document.getElementById('sim-verdict').textContent = 'NO MITIGATION NEEDED';
+                document.getElementById('sim-verdict').style.color = 'var(--cyan)';
+            }
+        }
+
+        ['input-workload', 'input-ambient', 'input-nits'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                playHudBeep(1600, 0.02);
+                updateSimulation();
+            });
         });
 
-        // Initial render with reference data
-        window.addEventListener('resize', () => drawTimeline(sampleSession.samples));
-        renderDashboard(sampleSession);
+        // Populate Black Box Ledger Table
+        const initialBlackBox = [
+            { time: "16:20:15", type: "SESSION_INIT", notes: "Observation started with adaptive governor in NORMAL mode", pred: "—", act: "35.2°C", hash: "#01·a8f4c2" },
+            { time: "16:22:30", type: "WORKLOAD_DETECT", notes: "Gaming workload identified: Genshin Impact package active", pred: "—", act: "37.0°C", hash: "#02·99b17d" },
+            { time: "16:24:00", type: "PIN_PREDICTION", notes: "Contract created for T+120s: Projected 38.6°C", pred: "38.6°C", act: "—", hash: "#03·55c8e1" },
+            { time: "16:26:00", type: "CONTRACT_RESOLVE", notes: "Contract evaluated: Actual 38.4°C vs Predicted 38.6°C", pred: "38.6°C", act: "38.4°C", hash: "#04·71d02a" },
+            { time: "16:28:45", type: "CLUTCH_MOMENT", notes: "Rapid rotation gyro event + audio burst captured", pred: "—", act: "39.1°C", hash: "#05·03e9ff" }
+        ];
+
+        function populateTable(rows) {
+            const tbody = document.getElementById('blackbox-table-body');
+            tbody.innerHTML = '';
+            rows.forEach(r => {
+                const tr = document.createElement('tr');
+                const badgeClass = r.type.includes('RESOLVE') ? 'badge-verified' : (r.type.includes('CLUTCH') ? 'badge-amber' : 'badge-verified');
+                tr.innerHTML = `
+                    <td style="color:var(--slate);">${r.time}</td>
+                    <td><span class="${badgeClass}">${r.type}</span></td>
+                    <td style="max-width:260px; overflow:hidden; text-overflow:ellipsis;">${r.notes}</td>
+                    <td style="color:var(--amber);">${r.pred}</td>
+                    <td style="color:var(--white);">${r.act}</td>
+                    <td style="color:var(--cyan); font-size:9.5px;">${r.hash}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        populateTable(initialBlackBox);
+
+        // Export Report Handler
+        document.getElementById('btnExport').addEventListener('click', () => {
+            playHudBeep(1800, 0.08);
+            const report = {
+                generator: "SOVARIX Office Kit Command Center HUD",
+                timestamp: new Date().toISOString(),
+                scenario: currentScenario,
+                telemetry: scenarios[currentScenario],
+                blackBox: initialBlackBox,
+                dna: {
+                    sessions: 14,
+                    maeC: 0.28,
+                    dissipationHalfLifeMin: 4.2
+                }
+            };
+            const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `sovarix-hud-report-${Date.now()}.json`;
+            a.click();
+        });
+
+        // Initialize
+        applyScenario('GAMING');
+        updateSimulation();
+        window.addEventListener('resize', () => drawOscilloscope(scenarios[currentScenario].samples));
     </script>
 </body>
 </html>

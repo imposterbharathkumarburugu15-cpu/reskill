@@ -4,40 +4,43 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
 
 // ==============================================================================
-// SOVARIX FLAGSHIP DESIGN SYSTEM
-// Premium dark-first palette: Deep graphite, elevated surfaces, electric cyan
+// SOVARIX MINIMALIST HIGH-TECH HUD DESIGN SYSTEM
+// OLED pitch-black, razor-thin borders, restrained industrial telemetry accents
 // ==============================================================================
 
-val SovarixBg = Color(0xFF080B10)              // Deep graphite/near black
-val SovarixDark = Color(0xFF0D1219)            // Subtle secondary dark
-val SovarixSurface = Color(0xFF121924)         // Primary elevated surface
-val SovarixSurfaceElevated = Color(0xFF172030) // Interactive surface
-val SovarixBorder = Color(0xFF1B2536)          // Refined border
-val SovarixBorderActive = Color(0xFF283850)    // Focused border
+val SovarixBg = Color(0xFF000000)              // Pure OLED Pitch Black
+val SovarixDark = Color(0xFF040609)            // Deepest HUD substrate
+val SovarixSurface = Color(0xFF080D14)         // Minimalist HUD panel surface
+val SovarixSurfaceElevated = Color(0xFF0F1722) // Interactive HUD surface
+val SovarixBorder = Color(0xFF15202E)          // Razor-thin industrial border (1px)
+val SovarixBorderActive = Color(0xFF223247)    // Active HUD border
+val SovarixBorderAccent = Color(0x3300E5FF)    // Restrained cyan hairline border
 
-val SovarixCyan = Color(0xFF00E5FF)            // Restrained flagship electric cyan
-val SovarixCyanSurface = Color(0xFF06232F)     // Cyan background tint
-val SovarixGreen = Color(0xFF00FF66)           // Stable/nominal state
-val SovarixGreenSurface = Color(0xFF062418)    // Green tint
-val SovarixAmber = Color(0xFFF59E0B)           // Rising thermal state
-val SovarixAmberSurface = Color(0xFF261907)    // Amber tint
-val SovarixOrange = Color(0xFFFF6B2B)          // Hot state
-val SovarixRed = Color(0xFFEF4444)             // Critical state
-val SovarixRedSurface = Color(0xFF280B10)      // Red tint
+val SovarixCyan = Color(0xFF00E5FF)            // Precision electric cyan (Primary HUD)
+val SovarixCyanLight = Color(0xFF67F0FF)       // Bright telemetry readout cyan
+val SovarixCyanSurface = Color(0xFF031A24)     // Cyan background tint
+val SovarixGreen = Color(0xFF00F5A0)           // Stealth quantum emerald (Nominal / Verified)
+val SovarixGreenSurface = Color(0xFF032115)    // Green tint
+val SovarixAmber = Color(0xFFFFB800)           // Radar caution amber (Warming)
+val SovarixAmberSurface = Color(0xFF241802)    // Amber tint
+val SovarixOrange = Color(0xFFFF6200)          // Elevated thermal orange (High load)
+val SovarixRed = Color(0xFFFF2A42)             // Critical alert crimson
+val SovarixRedSurface = Color(0xFF26050A)      // Red tint
 
-val SovarixDarkElevated = Color(0xFF172030)    // Alias for interactive elevated surface (= SovarixSurfaceElevated)
-val SovarixBlack = Color(0xFF000000)           // Pure black — for contrast text on cyan buttons
-val SovarixCyanLight = Color(0xFF67F0FF)       // Lighter/muted cyan — secondary cyan labels
+val SovarixDarkElevated = Color(0xFF0F1722)    // Interactive elevated surface
+val SovarixBlack = Color(0xFF000000)           // Pure black
+val SovarixFontMono = FontFamily.Monospace     // High-tech monospace data typography
 
-val SovarixTextPrimary = Color(0xFFF8FAFC)     // Crisp primary text
-val SovarixTextSecondary = Color(0xFF94A3B8)   // Slate secondary
-val SovarixTextMuted = Color(0xFF64748B)       // Muted details / caption
+val SovarixTextPrimary = Color(0xFFF8FAFC)     // Crisp white readout
+val SovarixTextSecondary = Color(0xFF8492A6)   // Technical slate secondary
+val SovarixTextMuted = Color(0xFF475569)       // Muted radar telemetry / captions
 
 private val DarkColorPalette = darkColorScheme(
     primary = SovarixCyan,
-    onPrimary = SovarixBg,
+    onPrimary = SovarixBlack,
     background = SovarixBg,
     surface = SovarixSurface,
     onSurface = SovarixTextPrimary,

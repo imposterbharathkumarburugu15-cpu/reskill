@@ -65,66 +65,66 @@ fun SovarixBottomNav(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
             .navigationBarsPadding(),
         contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(26.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            SovarixDarkElevated.copy(alpha = 0.94f),
-                            SovarixBlack.copy(alpha = 0.98f)
-                        )
-                    )
-                )
-                .border(1.dp, SovarixBorder, RoundedCornerShape(26.dp))
-                .padding(horizontal = 10.dp, vertical = 6.dp),
+                .clip(RoundedCornerShape(18.dp))
+                .background(SovarixDark)
+                .border(1.dp, SovarixBorder, RoundedCornerShape(18.dp))
+                .padding(horizontal = 8.dp, vertical = 7.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            SovarixTab.entries.forEach { tab ->
+            val tabPrefixes = listOf("01", "02", "03", "04", "05")
+            SovarixTab.entries.forEachIndexed { index, tab ->
                 val isSelected = tab == selectedTab
 
                 val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) SovarixCyanLight else SovarixTextMuted,
-                    animationSpec = tween(200),
+                    targetValue = if (isSelected) SovarixCyan else SovarixTextMuted,
+                    animationSpec = tween(180),
                     label = "iconColor"
                 )
 
                 val indicatorWidth by animateDpAsState(
-                    targetValue = if (isSelected) 18.dp else 0.dp,
+                    targetValue = if (isSelected) 22.dp else 0.dp,
                     animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
                     label = "indicatorWidth"
                 )
 
                 Column(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) SovarixSurfaceElevated else Color.Transparent)
+                        .border(
+                            1.dp,
+                            if (isSelected) SovarixBorderActive else Color.Transparent,
+                            RoundedCornerShape(12.dp)
+                        )
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) { onTabSelected(tab) }
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = tab.icon,
                             contentDescription = stringResource(tab.labelRes),
                             tint = iconColor,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(19.dp)
                         )
 
                         // Subtle active gaming pulse dot on GAME tab
                         if (tab == SovarixTab.GAME && isGamingActive) {
                             Box(
                                 modifier = Modifier
-                                    .size(6.dp)
+                                    .size(5.dp)
                                     .align(Alignment.TopEnd)
                                     .offset(x = 3.dp, y = (-2).dp)
                                     .clip(CircleShape)
@@ -133,23 +133,23 @@ fun SovarixBottomNav(
                         }
                     }
 
+                    // Monospace Technical HUD Tag: e.g. "01·HOME"
                     Text(
-                        text = stringResource(tab.labelRes),
-                        fontSize = 9.sp,
+                        text = "${tabPrefixes.getOrElse(index) { "0" }}·${stringResource(tab.labelRes)}",
+                        fontSize = 8.5.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        letterSpacing = 0.6.sp,
+                        fontFamily = SovarixFontMono,
+                        letterSpacing = 0.5.sp,
                         color = iconColor
                     )
 
-                    // Floating glowing indicator under selected tab
+                    // Sharp HUD Active Underline
                     Box(
                         modifier = Modifier
                             .width(indicatorWidth)
-                            .height(2.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) SovarixCyan else Color.Transparent
-                            )
+                            .height(1.5.dp)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(if (isSelected) SovarixCyan else Color.Transparent)
                     )
                 }
             }

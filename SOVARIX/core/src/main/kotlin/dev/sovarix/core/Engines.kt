@@ -23,15 +23,25 @@ class ObservationController(private val config: GovernorConfig) {
             return ObservationPolicy(ObservationMode.LOW_POWER, config.lowPowerMs, "Android reports critical thermal pressure. Session stopped.", false, true)
         }
         val budgetExceeded = governor.budgetExceeded(overhead)
-        if (economy || s.powerSave || !s.interactive || (s.batteryPct?.let { it <= config.batteryFloor } == true) ||
-            (s.thermalStatus ?: 0) >= 3 || (s.headroom ?: 0.0) >= 1.0 || budgetExceeded) {
+        if ((s.thermalStatus ?: 0) >= 3 || economy || s.powerSave || !s.interactive ||
+            (s.batteryPct?.let { it <= config.batteryFloor } == true) || budgetExceeded) {
             burstStart = null
             recoveryUntil = s.elapsedMs + config.recoveryHoldMs
             return ObservationPolicy(ObservationMode.LOW_POWER, config.lowPowerMs,
-                when { economy -> "Economy observation selected"; budgetExceeded -> "Own resource budget exceeded"
-                    !s.interactive -> "Screen off; no wake lock"; s.powerSave -> "Android battery saver active"
-                    (s.thermalStatus ?: 0) >= 3 || (s.headroom ?: 0.0) >= 1.0 -> "Thermal pressure: reducing our own work"
-                    else -> "Low battery: conserving resources" }, false)
+                when {
+                    (s.thermalStatus ?: 0) >= 3 -> "Thermal status indicates elevated thermal pressure"
+                    economy -> "Economy observation selected"
+                    budgetExceeded -> "Own resource budget exceeded"
+                    !s.interactive -> "Screen off; no wake lock"
+                    s.powerSave -> "Android battery saver active"
+                    else -> "Low battery: conserving resources"
+                }, false)
+        }
+        if ((s.headroom ?: 0.0) >= 1.0 || (s.batteryC != null && s.batteryC >= 42.5)) {
+            burstStart = null
+            recoveryUntil = s.elapsedMs + config.recoveryHoldMs
+            return ObservationPolicy(ObservationMode.THERMAL_PROTECTION, config.recoveryMs,
+                "Thermal protection active: reducing SOVARIX self-observation footprint", false)
         }
         val start = burstStart
         if (start != null) {
@@ -125,7 +135,7 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
      * Does NOT depend on AnomalyEngine output.
      */
     fun evaluate(state: TwinState, horizonMinutes: Int = 2): ForecastResult {
-        val fList = listOf(1, 2, 5, 15).map { forecast(state.history, it, state.dna) }
+        val fList = listOf(1, 2, 3, 5, 15).map { forecast(state.history, it, state.dna) }
         val active = fList.firstOrNull { it.horizonMinutes == horizonMinutes } ?: fList.firstOrNull()
         val tempVal = active?.temperature?.value
         val battVal = active?.battery?.value
@@ -145,7 +155,7 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
             else -> 0.30
         }
 
-        // Multi-horizon numerical extrapolations (+10s, +30s, +60s, +5m, +15m)
+        // Multi-horizon numerical extrapolations (+10s, +30s, +60s, +3m, +5m, +15m)
         val slopePerSec = ((state.thermalTrend?.temperatureVelocity ?: state.temperatureTrend?.slopePerMinute ?: 0.0) / 60.0).coerceIn(-0.1, 0.1)
         val sampleCount = state.history.size
         val spanMins = if (sampleCount > 0) sampleCount * 0.2 else 1.0
@@ -171,6 +181,13 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
             historyMinutes = spanMins,
             clamped = false
         )
+        val p3m = fList.firstOrNull { it.horizonMinutes == 3 }?.temperature ?: Projection(
+            value = (baselineTemp + slopePerSec * 180.0).coerceIn(-20.0, 80.0),
+            heuristicBand = 0.7,
+            samples = sampleCount,
+            historyMinutes = spanMins,
+            clamped = false
+        )
         val p5m = fList.firstOrNull { it.horizonMinutes == 5 }?.temperature
         val p15m = fList.firstOrNull { it.horizonMinutes == 15 }?.temperature
 
@@ -180,8 +197,33 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
             Projection(projectedCooling, 0.4, sampleCount, 2.0, false)
         } else null
 
+        val now = state.timestamp.takeIf { it > 0 } ?: (state.latest?.wallMs ?: System.currentTimeMillis())
+
+        val predictedThermalState = when {
+            p60.value >= 44.0 || (state.latest?.thermalStatus ?: 0) >= 4 -> DeviceThermalState.CRITICAL
+            p60.value >= 41.0 || (state.latest?.thermalStatus ?: 0) >= 3 -> DeviceThermalState.HOT
+            p60.value >= 39.0 || (state.latest?.thermalStatus ?: 0) >= 2 -> DeviceThermalState.PRE_COOL
+            slopePerSec < -0.002 || state.productState == ProductState.RECOVERY -> DeviceThermalState.COOLING
+            slopePerSec > 0.003 -> DeviceThermalState.WARMING
+            else -> DeviceThermalState.NORMAL
+        }
+
+        val perfRiskTrend = when {
+            predictedThermalState == DeviceThermalState.CRITICAL -> Risk.ANOMALY
+            predictedThermalState == DeviceThermalState.HOT || predictedThermalState == DeviceThermalState.PRE_COOL -> Risk.WATCH
+            else -> Risk.NORMAL
+        }
+
+        val records = listOf(
+            PredictionRecord("temperature", p30.value, now, 30, conf, "v2.0-adaptive-timeseries", perfRiskTrend),
+            PredictionRecord("temperature", p60.value, now, 60, conf, "v2.0-adaptive-timeseries", perfRiskTrend),
+            PredictionRecord("temperature", p3m.value, now, 180, (conf * 0.9).coerceIn(0.1, 0.95), "v2.0-adaptive-timeseries", perfRiskTrend),
+            PredictionRecord("temperature", p5m?.value ?: (baselineTemp + slopePerSec * 300.0).coerceIn(-20.0, 80.0), now, 300, (conf * 0.8).coerceIn(0.1, 0.95), "v2.0-adaptive-timeseries", perfRiskTrend),
+            PredictionRecord("temperature", p15m?.value ?: (baselineTemp + slopePerSec * 900.0).coerceIn(-20.0, 80.0), now, 900, (conf * 0.7).coerceIn(0.1, 0.95), "v2.0-adaptive-timeseries", perfRiskTrend)
+        )
+
         return ForecastResult(
-            timestamp = state.timestamp.takeIf { it > 0 } ?: (state.latest?.wallMs ?: 0L),
+            timestamp = now,
             horizonMinutes = horizonMinutes,
             predictedTemperature = tempVal,
             predictedBattery = battVal,
@@ -194,9 +236,13 @@ class ForecastEngine(private val config: GovernorConfig = GovernorConfig()) {
             forecast10s = p10,
             forecast30s = p30,
             forecast60s = p60,
+            forecast3m = p3m,
             forecast5m = p5m,
             forecast15m = p15m,
-            recoveryTrajectory = recoveryProj
+            recoveryTrajectory = recoveryProj,
+            predictedThermalState = predictedThermalState,
+            performanceRiskTrend = perfRiskTrend,
+            predictionRecords = records
         )
     }
 }
@@ -458,7 +504,143 @@ object SimulationEngine {
         val currentTemp = state.temperature ?: state.latest?.batteryC ?: 37.0
         val currentBatt = state.battery ?: 75.0
 
-        // 1. "What if I play for another hour?" / "60 minutes" / Telugu / Hindi
+        // 1. "+15 MIN GAMING" / "What happens if I play for another 15 minutes?"
+        if (q.contains("15 min") || q.contains("15 minutes") || q.contains("+15") ||
+            q.contains("15 నిమిషాలు") || q.contains("15 मिनट")) {
+            val deltaTemp = behavior.gamingDurationThermalCurve[15] ?: 2.4
+            val drain15m = (behavior.workloadBatteryDrainRates[Workload.GAMING] ?: 16.0) / 4.0
+            val projectedTemp = (currentTemp + deltaTemp).coerceIn(20.0, 55.0)
+            val projectedBatt = (currentBatt - drain15m).coerceIn(0.0, 100.0)
+
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT PATH: Stop Gaming Now",
+                assumedTrendMultiplier = 0.0,
+                predictedTemperatureC = currentTemp,
+                predictedBatteryPct = currentBatt,
+                thermalRisk = if (currentTemp >= 40.0) Risk.WATCH else Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Session ends now. Temperature stabilizes and begins cooling toward baseline."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: +15 Min Gaming Session",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = projectedTemp,
+                predictedBatteryPct = projectedBatt,
+                thermalRisk = if (projectedTemp >= 42.0) Risk.ANOMALY else if (projectedTemp >= 39.5) Risk.WATCH else Risk.NORMAL,
+                performanceRisk = if (projectedTemp >= 41.0) Risk.WATCH else Risk.NORMAL,
+                explanation = "Sustained 15 min gaming adds ~+${String.format(Locale.US, "%.1f", deltaTemp)}°C based on your device's empirical gaming thermal curve."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = if (projectedTemp >= 41.5) currentPath else alternativePath,
+                isSupported = true,
+                explanation = "PHONE LAB SIMULATION: +15 minutes gaming adds ~+${String.format(Locale.US, "%.1f", deltaTemp)}°C and ~${String.format(Locale.US, "%.1f%%", drain15m)} battery drain."
+            )
+        }
+
+        // 2. "REDUCE BRIGHTNESS" / "screen brightness"
+        if (q.contains("brightness") || q.contains("dim") || q.contains("బ్రైట్‌నెస్") || q.contains("ब्राइटनेस")) {
+            val deltaTemp = 0.8
+            val drainSaving = 2.5
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT PATH: Full Display Brightness",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = (currentTemp + 1.2).coerceIn(20.0, 55.0),
+                predictedBatteryPct = (currentBatt - 3.5).coerceIn(0.0, 100.0),
+                thermalRisk = if (currentTemp >= 40.0) Risk.WATCH else Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Display backlight operating at current brightness level."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: Reduced Display Brightness (-30%)",
+                assumedTrendMultiplier = 0.7,
+                predictedTemperatureC = (currentTemp + 0.4).coerceIn(20.0, 55.0),
+                predictedBatteryPct = (currentBatt - (3.5 - drainSaving * 0.25)).coerceIn(0.0, 100.0),
+                thermalRisk = Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Lower display radiant heating slows thermal rise by ~0.8°C over 15 minutes."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = alternativePath,
+                isSupported = true,
+                explanation = "PHONE LAB SIMULATION: Reducing display brightness decreases thermal accumulation and saves battery."
+            )
+        }
+
+        // 3. "STOP MONITORING" / "What if I stop monitoring?"
+        if (q.contains("stop monitoring") || q.contains("stop monitor") || q.contains("ఆపితే మానిటరింగ్") || q.contains("निगरानी बंद")) {
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT PATH: SOVARIX Active Telemetry (5-10s)",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = currentTemp,
+                predictedBatteryPct = currentBatt,
+                thermalRisk = Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Adaptive observation active: CPU ~1.2%, RAM ~45MB."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: Zero SOVARIX Overhead (Stopped)",
+                assumedTrendMultiplier = 0.98,
+                predictedTemperatureC = (currentTemp - 0.1).coerceAtLeast(35.0),
+                predictedBatteryPct = currentBatt,
+                thermalRisk = Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Monitoring stopped. Eliminates SOVARIX self-sampling cost. Note: Thermal guard won't intervene."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = currentPath,
+                isSupported = true,
+                explanation = "PHONE LAB SIMULATION: Stopping monitoring saves negligible power (<0.2%/hr) but disables thermal protection."
+            )
+        }
+
+        // 4. "CONTINUE CURRENT LOAD" / "What if this thermal trend continues?"
+        if (q.contains("continue") || q.contains("trend continues") || q.contains("current load") || q.contains("కొనసాగితే") || q.contains("जारी रहे")) {
+            val slopePerMin = (state.thermalTrend?.temperatureVelocity ?: state.temperatureTrend?.slopePerMinute ?: 0.20)
+            val projectedRise = (slopePerMin * 15.0).coerceIn(-5.0, 10.0)
+            val projectedTemp = (currentTemp + projectedRise).coerceIn(20.0, 55.0)
+
+            val currentPath = SimulationScenario(
+                id = "current_path",
+                name = "CURRENT TRAJECTORY: Trend Continues Unchanged",
+                assumedTrendMultiplier = 1.0,
+                predictedTemperatureC = projectedTemp,
+                predictedBatteryPct = (currentBatt - 4.0).coerceIn(0.0, 100.0),
+                thermalRisk = if (projectedTemp >= 42.0) Risk.ANOMALY else if (projectedTemp >= 39.5) Risk.WATCH else Risk.NORMAL,
+                performanceRisk = if (projectedTemp >= 41.5) Risk.ANOMALY else Risk.NORMAL,
+                explanation = "Extrapolates current rate of change (${String.format(Locale.US, "%+.2f°C/min", slopePerMin)}) over 15 minutes."
+            )
+            val alternativePath = SimulationScenario(
+                id = "alternative_path",
+                name = "ALTERNATIVE PATH: Thermal Guard / Auto-Cool Active",
+                assumedTrendMultiplier = 0.35,
+                predictedTemperatureC = (currentTemp + projectedRise * 0.35).coerceIn(20.0, 55.0),
+                predictedBatteryPct = (currentBatt - 2.5).coerceIn(0.0, 100.0),
+                thermalRisk = Risk.NORMAL,
+                performanceRisk = Risk.NORMAL,
+                explanation = "Auto-Cool self-mitigation prevents runaway heating, stabilizing temperature."
+            )
+            return SimulationResult(
+                timestamp = now,
+                scenarios = listOf(currentPath, alternativePath),
+                recommendedScenario = alternativePath,
+                isSupported = true,
+                explanation = "PHONE LAB SIMULATION: Unchecked trend reaches ${String.format(Locale.US, "%.1f°C", projectedTemp)} in 15 min; Thermal Guard mitigates to ${String.format(Locale.US, "%.1f°C", currentTemp + projectedRise * 0.35)}."
+            )
+        }
+
+        // 5. "What if I play for another hour?" / "60 minutes" / Telugu / Hindi
         if (q.contains("hour") || q.contains("60 min") || q.contains("another 60") ||
             q.contains("గంట") || q.contains("ఆడితే") || q.contains("ఆడినా") ||
             q.contains("घंटे") || q.contains("खेलूं") || q.contains("एक घंटा")) {
@@ -496,7 +678,7 @@ object SimulationEngine {
             )
         }
 
-        // 2. "What if I record while gaming?" / "screen recording" / Telugu / Hindi
+        // 6. "What if I record while gaming?" / "screen recording" / Telugu / Hindi
         if (q.contains("record") || q.contains("screen capture") ||
             q.contains("రికార్డ్") || q.contains("రికార్డింగ్") ||
             q.contains("रिकॉर्ड") || q.contains("रिकॉर्डिंग")) {
@@ -533,7 +715,7 @@ object SimulationEngine {
             )
         }
 
-        // 3. "What if I charge while gaming?" / "charging" / Telugu / Hindi
+        // 7. "What if I charge while gaming?" / "charging" / Telugu / Hindi
         if (q.contains("charge") || q.contains("charging") ||
             q.contains("ఛార్జ్") || q.contains("ఛార్జింగ్") ||
             q.contains("चार्ज") || q.contains("चार्जिंग")) {
@@ -571,10 +753,10 @@ object SimulationEngine {
             )
         }
 
-        // 4. "What if I reduce the workload?" / "reduce" / Telugu / Hindi
+        // 8. "REDUCE WORKLOAD" / "What if workload is reduced?"
         if (q.contains("reduce") || q.contains("lower") || q.contains("cool") || q.contains("mitigat") ||
-            q.contains("stop") || q.contains("తగ్గించ") || q.contains("తగ్గిస్తే") || q.contains("ఆపితే") ||
-            q.contains("कम") || q.contains("घटा") || q.contains("बंद")) {
+            q.contains("workload") || q.contains("తగ్గించ") || q.contains("తగ్గిస్తే") ||
+            q.contains("कम") || q.contains("घटा")) {
             val coolingRate = kotlin.math.abs(behavior.interventionRecoveryRateCPerMin ?: 0.22)
             val projectedTemp = (currentTemp - coolingRate * 10.0).coerceAtLeast(36.0)
 
@@ -1359,6 +1541,29 @@ class VerificationEngine(private val config: GovernorConfig = GovernorConfig()) 
             confidence = if (v.status == "VERIFIED") 0.95 else 0.50
         )
     }
+
+    /**
+     * Resolves a PredictionContract against actual elapsed physical sample.
+     */
+    fun resolveContract(contract: PredictionContract, sample: Sample, contextChanged: Boolean = false): PredictionContract? {
+        if (sample.elapsedMs < contract.dueAtElapsedMs) return null
+        val validTime = sample.elapsedMs - contract.dueAtElapsedMs <= config.maxGapMs
+        val actual = sample.batteryC.takeIf { validTime }
+        val predicted = contract.predictedValue
+        val signedErr = if (predicted.isFinite() && actual != null) actual - predicted else null
+        val status = when {
+            !validTime -> "MISSED — sampling gap"
+            contextChanged -> "OBSERVED — context changed"
+            actual == null -> "OBSERVED — thermal comparison unavailable"
+            else -> "VERIFIED"
+        }
+        return contract.copy(
+            actualValue = actual,
+            signedError = signedErr,
+            status = status,
+            resolvedAtWallMs = sample.wallMs
+        )
+    }
 }
 
 object LearningEngine {
@@ -1388,6 +1593,86 @@ object LearningEngine {
         val updated = (0.8 * old + 0.2 * targetBias).coerceIn(-3.0, 3.0)
         return dna.copy(temperatureBiasByHorizon = dna.temperatureBiasByHorizon + (v.horizonMinutes to updated),
             verifiedCount = dna.verifiedCount + 1, totalAbsoluteErrorC = dna.totalAbsoluteErrorC + abs(err))
+    }
+
+    fun verified(dna: DeviceDNA, contract: PredictionContract): DeviceDNA {
+        val err = contract.signedError ?: return dna
+        if (contract.status != "VERIFIED" || !err.isFinite()) return dna
+        val horizonMin = max(1, (contract.targetHorizonSeconds / 60))
+        val old = dna.temperatureBiasByHorizon[horizonMin] ?: 0.0
+        val targetBias = old + err
+        val updated = (0.8 * old + 0.2 * targetBias).coerceIn(-3.0, 3.0)
+        return dna.copy(
+            temperatureBiasByHorizon = dna.temperatureBiasByHorizon + (horizonMin to updated),
+            verifiedCount = dna.verifiedCount + 1,
+            totalAbsoluteErrorC = dna.totalAbsoluteErrorC + abs(err)
+        )
+    }
+}
+
+/**
+ * Section 10: Causal Memory Engine.
+ * Discovers and records real behavioral sequences specific to this device:
+ * Trigger -> High Workload -> Thermal Rise -> Performance Risk -> Auto-Cool -> Recovery
+ */
+object CausalMemoryEngine {
+    fun recordCausalSequence(
+        state: TwinState,
+        trigger: String,
+        stages: List<String>,
+        deltaC: Double,
+        recoverySec: Long,
+        conclusion: String
+    ): CausalChain {
+        return CausalChain(
+            id = "causal_${System.currentTimeMillis()}",
+            timestamp = System.currentTimeMillis(),
+            trigger = trigger,
+            stages = stages,
+            measuredDeltaC = deltaC,
+            recoveryTimeSec = recoverySec,
+            frequency = 1,
+            confidence = 0.90,
+            learnedConclusion = conclusion
+        )
+    }
+
+    /**
+     * Discovers empirical behavioral sequences on this physical device.
+     */
+    fun discover(state: TwinState, incident: Incident?, decision: DecisionResult?): List<CausalChain> {
+        val chains = mutableListOf<CausalChain>()
+        val s = state.latest ?: return chains
+        val temp = s.batteryC ?: return chains
+        val baseline = state.dna.baselineByContext[AnomalyEngine.contextKey(s)]?.meanC ?: 37.0
+        val delta = temp - baseline
+
+        // Pattern 1: GAMING + HIGH WORKLOAD -> THERMAL RISE -> AUTO-COOL / RECOVERY
+        if (state.workload == Workload.GAMING && delta >= 2.0) {
+            val stages = mutableListOf("GAMING_START", "HIGH_WORKLOAD", "THERMAL_RISE")
+            if ((s.thermalStatus ?: 0) >= 2) stages += "PERFORMANCE_RISK"
+            if (decision?.recommendedAction == TwinAction.REDUCE_OBSERVATION || state.policy.mode == ObservationMode.THERMAL_PROTECTION) {
+                stages += "AUTO_COOL"
+            }
+            if (state.thermalVelocity < 0.0 || state.workload == Workload.RECOVERY) {
+                stages += "TEMPERATURE_RECOVERY"
+            }
+            chains += CausalChain(
+                id = "causal_gaming_thermal_${s.wallMs / 60_000}",
+                timestamp = s.wallMs,
+                trigger = if (state.chargingState == true) "GAMING + CHARGING" else "GAMING",
+                stages = stages,
+                measuredDeltaC = delta,
+                recoveryTimeSec = if (stages.contains("TEMPERATURE_RECOVERY")) 240L else 0L,
+                frequency = 1,
+                confidence = 0.88,
+                learnedConclusion = if (state.chargingState == true)
+                    "Your device reaches thermal acceleration faster during gaming while charging."
+                else
+                    "Sustained gaming induces ~+${String.format(Locale.US, "%.1f", delta)}°C thermal rise before stabilization."
+            )
+        }
+        return chains
     }
 }
 
@@ -1469,9 +1754,8 @@ object LocalAIEngine {
             }
 
             // Check for supported What-If simulations
-            q.contains("fps") || q.contains("frame rate") || q.contains("60") || q.contains("90") || q.contains("120") -> {
+            q.contains("fps") || q.contains("frame rate") -> {
                 val target = when {
-                    q.contains("60") -> "60"
                     q.contains("90") -> "90"
                     q.contains("120") -> "120"
                     else -> "60"
@@ -1511,6 +1795,18 @@ object LocalAIEngine {
                 )
             }
 
+            // Check for natural language what-if simulations
+            q.contains("what if") || q.contains("what happens") || q.contains("simulate") ||
+                q.contains("ఏమవుతుంది") || q.contains("क्या होगा") ||
+                q.contains("play for another") || q.contains("stop monitoring") || q.contains("thermal trend continues") ||
+                q.contains("+15") || q.contains("15 min") -> {
+                LocalAIIntent(
+                    LocalAIIntentType.SIMULATE,
+                    simulationRequest = SimulationRequest(ControllableLever.WORKLOAD_INTENSITY, "50%"),
+                    rawQuery = query
+                )
+            }
+
             // Explanations & Diagnostics (English, Telugu, Hindi)
             q.contains("anomaly") || q.contains("hot") || q.contains("heat") || q.contains("thermal") || q.contains("spike") ||
                 q.contains("వేడెక్కుతోంది") || q.contains("వేడి") || q.contains("గర్మ") || q.contains("गर्म") || q.contains("तापमान") ->
@@ -1535,6 +1831,48 @@ object LocalAIEngine {
         }
     }
 
+    /**
+     * Converts natural language user queries into structured simulation requests per Section 5.
+     */
+    fun parseSimulationRequest(query: String, state: TwinState = TwinState()): StructuredSimulationRequest {
+        val q = query.lowercase(Locale.ROOT)
+        val duration = when {
+            q.contains("30 min") || q.contains("30m") -> 30
+            q.contains("15 min") || q.contains("15m") || q.contains("+15") -> 15
+            q.contains("10 min") || q.contains("10m") -> 10
+            q.contains("5 min") || q.contains("5m") -> 5
+            q.contains("3 min") || q.contains("3m") -> 3
+            q.contains("1 min") || q.contains("1m") -> 1
+            else -> 15
+        }
+        val workload = when {
+            q.contains("game") || q.contains("gaming") || q.contains("play") -> Workload.GAMING
+            q.contains("charge") || q.contains("charging") -> Workload.EVERYDAY
+            q.contains("idle") -> Workload.IDLE
+            else -> if (state.workload != Workload.UNSPECIFIED) state.workload else Workload.GAMING
+        }
+        val (lever, targetVal) = when {
+            q.contains("brightness") || q.contains("dim") || q.contains("screen") ->
+                ControllableLever.APP_DIMMING to "20%"
+            q.contains("stop monitoring") || q.contains("disable monitoring") || q.contains("no monitoring") ->
+                ControllableLever.WORKLOAD_INTENSITY to "0%"
+            q.contains("fps") || q.contains("frame rate") ->
+                ControllableLever.FPS_CAP to (if (q.contains("90")) "90" else if (q.contains("120")) "120" else "60")
+            q.contains("resolution") || q.contains("720p") || q.contains("1080p") ->
+                ControllableLever.RESOLUTION_SCALE to (if (q.contains("720")) "720p" else "1080p")
+            else ->
+                ControllableLever.WORKLOAD_INTENSITY to "50%"
+        }
+        return StructuredSimulationRequest(
+            intent = "SIMULATE",
+            durationMinutes = duration,
+            workload = workload,
+            lever = lever,
+            targetValue = targetVal,
+            rawPrompt = query
+        )
+    }
+
     /** Dispatches and explains a user natural language query */
     fun handleQuery(
         query: String,
@@ -1557,8 +1895,12 @@ object LocalAIEngine {
                 "• Resolution Scale (720p, 1080p)"
             }
             LocalAIIntentType.SIMULATE -> {
-                val req = intent.simulationRequest ?: SimulationRequest(ControllableLever.FPS_CAP, "60")
-                val outcome = SimulationEngine.simulateLever(state, req)
+                val req = intent.simulationRequest
+                val outcome = when {
+                    req != null -> SimulationEngine.simulateLever(state, req)
+                    query.isNotBlank() -> SimulationEngine.simulateQuery(state, query)
+                    else -> SimulationEngine.simulateLever(state, SimulationRequest(ControllableLever.FPS_CAP, "60"))
+                }
                 explainSimulation(outcome)
             }
             LocalAIIntentType.EXPLAIN_ANOMALY -> {

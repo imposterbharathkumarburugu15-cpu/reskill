@@ -2,10 +2,13 @@ package dev.sovarix.app.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -295,49 +298,71 @@ fun LiveDeviceVisualizer(
                 }
             }
 
-            // Center Content: Hero Typography & Digital Twin State
+            // Center Content: Minimalist High-Tech HUD Readout
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Large Hero Temperature
-                Text(
-                    text = String.format(Locale.US, "%.1f°", temp),
-                    fontSize = 56.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = (-2.5).sp,
-                    color = SovarixTextPrimary,
-                    fontFamily = FontFamily.SansSerif
-                )
+                // Large High-Precision Digital Readout
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = String.format(Locale.US, "%.1f", temp),
+                        fontSize = 52.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-1.5).sp,
+                        color = SovarixTextPrimary,
+                        fontFamily = SovarixFontMono
+                    )
+                    Text(
+                        text = "°C",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = SovarixFontMono,
+                        color = coreColor,
+                        modifier = Modifier.padding(bottom = 8.dp, start = 2.dp)
+                    )
+                }
 
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
 
-                // Living Semantic State Label
-                Text(
-                    text = stateLabel,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    letterSpacing = 1.5.sp,
-                    color = coreColor
-                )
+                // Technical HUD Velocity Badge
+                val velocitySign = if (velocityPerMin >= 0) "+" else ""
+                val velocityText = String.format(Locale.US, "%s%.2f°/min", velocitySign, velocityPerMin)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(SovarixDarkElevated)
+                        .border(1.dp, coreColor.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "[ $stateLabel // $velocityText ]",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        fontFamily = SovarixFontMono,
+                        color = coreColor
+                    )
+                }
 
                 Spacer(Modifier.height(6.dp))
 
                 // Human-centric outcome subtext
                 val verdict = when {
-                    isAutoCoolActive -> "Auto-Cool is reducing available workload."
-                    isCritical -> "Device temperature is critical."
-                    isHot -> "Thermal load is elevated."
-                    isWarming -> "Thermal trend rising."
-                    isRecovery -> "Thermal conditions returning to normal."
-                    else -> "Auto-Cool armed"
+                    isAutoCoolActive -> "AUTO-COOL MITIGATION IN EFFECT"
+                    isCritical -> "DEVICE THERMAL LIMIT REACHED"
+                    isHot -> "THERMAL LOAD ELEVATED"
+                    isWarming -> "THERMAL ACCELERATION DETECTED"
+                    isRecovery -> "DISSIPATION ACTIVE // NORMALIZING"
+                    else -> "THERMAL EQUILIBRIUM NOMINAL"
                 }
 
                 Text(
                     text = verdict,
-                    fontSize = 10.sp,
+                    fontSize = 9.5.sp,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.5.sp,
+                    letterSpacing = 0.8.sp,
+                    fontFamily = SovarixFontMono,
                     color = if (isAutoCoolActive) SovarixCyan else SovarixTextSecondary
                 )
             }
@@ -349,8 +374,8 @@ fun LiveDeviceVisualizer(
             color = coreColor,
             phase = tracePhase,
             modifier = Modifier
-                .width(180.dp)
-                .height(22.dp)
+                .width(200.dp)
+                .height(24.dp)
         )
     }
 }
